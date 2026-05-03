@@ -3,18 +3,26 @@ import type { NextConfig } from "next";
 // CSP notes:
 //   • script-src needs 'unsafe-inline' for the dark-mode flash-prevention script
 //     in app/layout.tsx (dangerouslySetInnerHTML, runs before hydration).
+//   • Dev only: React + Turbopack use eval() for debugging features (callstack
+//     reconstruction, source maps). Production builds never call eval(), so we
+//     keep 'unsafe-eval' out of the production CSP.
 //   • style-src needs 'unsafe-inline' because Tailwind/shadcn emit inline styles.
 //   • img-src is permissive (https + data:) since marketplace logos load from
 //     several Atlassian/vendor CDNs and we cannot enumerate them all.
-//   • connect-src 'self' covers our /api/* proxies; outbound vendor-status
-//     fetches are server-side, not browser-initiated.
+//   • connect-src 'self' covers our /api/* proxies in production; dev mode also
+//     needs ws: for the Turbopack HMR socket.
+const isDev = process.env.NODE_ENV !== "production";
+const scriptSrc = isDev
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+  : "script-src 'self' 'unsafe-inline'";
+const connectSrc = isDev ? "connect-src 'self' ws: wss:" : "connect-src 'self'";
 const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  scriptSrc,
   "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
   "img-src 'self' data: https:",
   "font-src 'self' fonts.gstatic.com",
-  "connect-src 'self'",
+  connectSrc,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
