@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -370,6 +370,45 @@ const AppRow = memo(function AppRow({
   );
 });
 
+// Re-resolve statusUrl + checkType for every stored app against the current
+// PRODUCT_RULES / VENDOR_STATUS_MAP. This silently fixes stale localStorage
+// data (e.g. old draw.io summary.json URL) when the user revisits after a
+// vendor-map update, without requiring a manual reset.
+function migrateApps(prev: RegisteredApp[]): RegisteredApp[] {
+  let changed = false;
+  const migrated = prev.map((app) => {
+    const normalizedVendor = normalizeVendorName(app.vendorName);
+    if (VENDOR_BLACKLIST.has(normalizedVendor)) {
+      if (app.statusUrl !== "" || app.checkType !== "custom") {
+        changed = true;
+        return { ...app, statusUrl: "", checkType: "custom" as const };
+      }
+      return app;
+    }
+    const resolved = resolveStatusUrl(app.appName, normalizedVendor);
+    if (
+      resolved &&
+      (resolved.statusUrl !== app.statusUrl || resolved.checkType !== app.checkType)
+    ) {
+      changed = true;
+      return { ...app, statusUrl: resolved.statusUrl, checkType: resolved.checkType };
+    }
+    return app;
+  });
+  return changed ? migrated : prev;
+}
+
+// `useIsMounted` returns false on the server (and during the very first
+// client render to keep SSR + initial client output identical), then true
+// after hydration. Implemented with useSyncExternalStore so we avoid the
+// setState-in-effect pattern.
+const subscribeNoop = () => () => {};
+const isMountedClient = () => true;
+const isMountedServer = () => false;
+function useIsMounted(): boolean {
+  return useSyncExternalStore(subscribeNoop, isMountedClient, isMountedServer);
+}
+
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 
 export function StatusDashboard() {
@@ -377,7 +416,7 @@ export function StatusDashboard() {
   // `isMounted` is false on the server and on the very first client render.
   // All localStorage-derived values are hidden until it becomes true, so the
   // SSR HTML and the initial client render are identical — no hydration mismatch.
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
 
   // Lazy initializers still correctly pre-populate state from localStorage on
   // the client; we just don't *render* that data until after hydration.
@@ -387,7 +426,7 @@ export function StatusDashboard() {
       const raw = localStorage.getItem(APPS_KEY);
       if (raw !== null) {
         const parsed = JSON.parse(raw) as RegisteredApp[];
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) return migrateApps(parsed);
       }
     } catch {
       localStorage.removeItem(APPS_KEY);
@@ -412,11 +451,23 @@ export function StatusDashboard() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [quickSetupOpen, setQuickSetupOpen] = useState(false);
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  // Auto-open onboarding on first visit (no apps stored yet). Lazy initializer
+  // reads localStorage so the dialog renders open immediately after hydration —
+  // no setState-in-effect needed.
+  const [onboardingOpen, setOnboardingOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const raw = localStorage.getItem(APPS_KEY);
+      if (raw === null) return true;
+      const parsed = JSON.parse(raw) as RegisteredApp[];
+      return Array.isArray(parsed) && parsed.length === 0;
+    } catch {
+      return true;
+    }
+  });
   const [deleteTarget, setDeleteTarget] = useState<RegisteredApp | null>(null);
   const [toasts, setToasts] = useState<StatusToast[]>([]);
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
-  const [hasShownOnboarding, setHasShownOnboarding] = useState(false);
 
   // Use a ref so async callbacks always read the latest apps value
   const appsRef = useRef(apps);
@@ -533,39 +584,8 @@ export function StatusDashboard() {
     }
   };
 
-  // ── URL migration ───────────────────────────────────────────────────────────
-  // Re-resolve statusUrl + checkType for every stored app against the current
-  // PRODUCT_RULES / VENDOR_STATUS_MAP. This silently fixes stale localStorage
-  // data (e.g. old draw.io summary.json URL) without requiring a manual reset.
-  useEffect(() => {
-    setApps((prev) => {
-      let changed = false;
-      const migrated = prev.map((app) => {
-        const normalizedVendor = normalizeVendorName(app.vendorName);
-
-        // Blacklisted vendors must have no status URL. If a previous bug assigned
-        // one (e.g. PRODUCT_RULES "structure" keyword matching an OSCI app), clear it.
-        if (VENDOR_BLACKLIST.has(normalizedVendor)) {
-          if (app.statusUrl !== "" || app.checkType !== "custom") {
-            changed = true;
-            return { ...app, statusUrl: "", checkType: "custom" as const };
-          }
-          return app;
-        }
-
-        const resolved = resolveStatusUrl(app.appName, normalizedVendor);
-        if (
-          resolved &&
-          (resolved.statusUrl !== app.statusUrl || resolved.checkType !== app.checkType)
-        ) {
-          changed = true;
-          return { ...app, statusUrl: resolved.statusUrl, checkType: resolved.checkType };
-        }
-        return app;
-      });
-      return changed ? migrated : prev;
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // (Migration of stored apps now happens inline in the lazy useState
+  // initializer above; see migrateApps().)
 
   // Multi-tab sync — re-read localStorage when another tab writes to our keys.
   // The `storage` event only fires in OTHER tabs/windows, not the current one,
@@ -589,26 +609,25 @@ export function StatusDashboard() {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  // Mark as mounted — flips the isMounted guard so client-specific data renders.
-  useEffect(() => { setIsMounted(true); }, []);
-
   // Initial health check fires after mount so the real table is visible first.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // checkAllStatuses calls setState internally, but it's an async function — the
+  // setState happens after a microtask boundary, not synchronously in the effect
+  // body. The `set-state-in-effect` rule sees the call and warns regardless;
+  // disabling here is safe.
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
   useEffect(() => { if (isMounted) void checkAllStatuses(); }, [isMounted]);
 
-  // Show onboarding guide for first-time users with empty dashboard.
-  useEffect(() => {
-    if (!isMounted || hasShownOnboarding || apps.length > 0) return;
-    setOnboardingOpen(true);
-    setHasShownOnboarding(true);
-  }, [isMounted, hasShownOnboarding, apps.length]);
+  // (Onboarding auto-open is handled by the lazy initializer of `onboardingOpen`
+  // above — no effect needed.)
 
-  // Auto-refresh every 5 minutes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Auto-refresh every 5 minutes. checkAllStatuses is intentionally omitted
+  // from deps — it's redefined every render, and re-firing the interval setup
+  // on every render would cancel + reschedule the timer.
   useEffect(() => {
     if (!isMounted) return;
     const id = setInterval(() => void checkAllStatuses(), AUTO_REFRESH_MS);
     return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted]);
 
   // ── Sort ───────────────────────────────────────────────────────────────────

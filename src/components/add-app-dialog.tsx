@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { type CheckType, type MarketplaceSearchItem, type RegisteredApp } from "@/types";
+import { guardOutboundUrl } from "@/lib/url-guard";
 
 interface AddAppDialogProps {
   open: boolean;
@@ -167,9 +168,14 @@ export function AddAppDialog({
     }
   };
 
-  const isValidUrl = (url: string) => {
-    try { new URL(url); return true; } catch { return false; }
+  const validateUrl = (url: string): { ok: boolean; reason?: string } => {
+    if (!url) return { ok: false, reason: "" };
+    const guard = guardOutboundUrl(url);
+    if (!guard.ok) return { ok: false, reason: guard.reason };
+    return { ok: true };
   };
+  const isValidUrl = (url: string) => validateUrl(url).ok;
+  const urlValidation = validateUrl(customUrl);
 
   const liveIsLong = query.trim().length >= 2;
   const debouncedIsLong = debouncedQuery.trim().length >= 2;
@@ -231,10 +237,14 @@ export function AddAppDialog({
                 placeholder="https://status.vendor.com/api/v2/status.json"
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ring"
               />
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Paste the vendor&rsquo;s /api/v2/status.json or /summary.json endpoint.
-                Leave blank to add without monitoring.
-              </p>
+              {customUrl && !urlValidation.ok ? (
+                <p className="mt-1.5 text-[11px] text-red-500">{urlValidation.reason}</p>
+              ) : (
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  Paste the vendor&rsquo;s /api/v2/status.json or /summary.json endpoint.
+                  Leave blank to add without monitoring.
+                </p>
+              )}
             </div>
 
             {/* Action buttons */}

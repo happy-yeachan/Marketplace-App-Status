@@ -9,6 +9,9 @@
     "lint": "eslint",
     "audit:urls": "node --experimental-strip-types scripts/audit-static-urls.ts"
   },
+  "engines": {
+    "node": ">=20.18.0 <23"
+  },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
     "class-variance-authority": "^0.7.1",

@@ -157,7 +157,10 @@ export const VENDOR_STATUS_MAP: Record<string, string> = {
   "herocoders":         "https://status.herocoders.com/api/v2/summary.json",
   "exalate":            "https://status.exalate.com/api/v2/summary.json",
   "move work forward":  "https://status.moveworkforward.com/api/v2/summary.json",
-  "valiantys":          "https://status.elements-apps.com/api/v2/summary.json",
+  // Elements (formerly Valiantys' nFeed line) — Marketplace vendor name is now
+  // "Elements - Atlassian ITSM Partner of the Year ...", so the key matches the
+  // current branding via lookupVendorStatus's prefix match.
+  "elements":           "https://status.elements-apps.com/api/v2/summary.json",
 
   // ── Utilities & agile management ──────────────────────────────────────────
   "deviniti":           "https://deviniti.statuspage.io/api/v2/summary.json",

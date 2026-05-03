@@ -1,20 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function ThemeToggle() {
-  const [dark, setDark] = useState(false);
+// Subscribe to <html class="dark"> changes so toggling in another tab
+// (or via the anti-flicker script) is reflected without a setState-in-effect.
+function subscribeToTheme(notify: () => void): () => void {
+  const observer = new MutationObserver(notify);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  return () => observer.disconnect();
+}
 
-  useEffect(() => {
-    // Read initial state from the class set by the anti-flicker script
-    setDark(document.documentElement.classList.contains("dark"));
-  }, []);
+const getThemeSnapshot = () => document.documentElement.classList.contains("dark");
+// Server snapshot: assume light. The anti-flicker script in app/layout.tsx
+// applies the class before hydration, and the html element uses
+// suppressHydrationWarning so the brief mismatch is benign.
+const getThemeServerSnapshot = () => false;
+
+export function ThemeToggle() {
+  const dark = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getThemeServerSnapshot);
 
   const toggle = () => {
     const next = !dark;
-    setDark(next);
     if (next) {
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");

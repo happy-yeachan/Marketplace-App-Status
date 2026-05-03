@@ -35,7 +35,7 @@ const CURATED: CuratedEntry[] = [
   { query: "Git Integration for Jira", vendorHint: "gitkraken", category: "Dev Tools" },
   { query: "Exalate Issue Sync", vendorHint: "exalate", category: "Dev Tools" },
   // Integrations
-  { query: "Elements Connect", vendorHint: "valiantys", category: "Integrations" },
+  { query: "Elements Connect", vendorHint: "elements", category: "Integrations" },
   // Utilities
   { query: "OKR Board for Jira", vendorHint: "oboard", category: "Utilities" },
   { query: "Balsamiq Wireframes for Jira", vendorHint: "balsamiq", category: "Utilities" },

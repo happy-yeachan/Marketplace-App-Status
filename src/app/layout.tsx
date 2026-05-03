@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,7 +14,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://atlassian-app-status.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Atlassian App Status — Real-time Jira & Confluence App Health",
   description:
     "Monitor the live service health of your Atlassian Marketplace apps — ScriptRunner, Tempo, draw.io, Zephyr and hundreds more. One dashboard, no login required.",
@@ -29,9 +33,12 @@ export const metadata: Metadata = {
     "Tempo",
     "Zephyr",
   ],
+  alternates: { canonical: SITE_URL },
+  // /favicon.ico (App Router auto-detects) handles the .ico fallback;
+  // app/apple-icon.tsx generates the 180×180 apple-touch-icon at build time.
   icons: {
     icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    shortcut: "/favicon.ico",
   },
   openGraph: {
     title: "Atlassian App Status",
@@ -39,9 +46,11 @@ export const metadata: Metadata = {
       "Real-time service health for Jira & Confluence marketplace apps. One dashboard for all your installed apps.",
     type: "website",
     locale: "en_US",
+    url: SITE_URL,
+    siteName: "Atlassian App Status",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Atlassian App Status",
     description: "Real-time service health for Jira & Confluence marketplace apps.",
   },
@@ -67,7 +76,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          {children}
+          <SiteFooter />
+        </TooltipProvider>
       </body>
     </html>
   );

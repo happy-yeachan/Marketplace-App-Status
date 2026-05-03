@@ -104,7 +104,7 @@ export function OnboardingDialog({ open, onOpenChange }: OnboardingDialogProps) 
 
         <div className="border-t pt-4">
           <p className="mb-3 text-xs text-muted-foreground">
-            💾 <strong>Privacy note:</strong> All apps and history are stored only in your browser's
+            💾 <strong>Privacy note:</strong> All apps and history are stored only in your browser&rsquo;s
             localStorage. Nothing is sent to external servers except vendor status API calls.
           </p>
         </div>

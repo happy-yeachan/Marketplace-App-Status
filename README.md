@@ -329,7 +329,7 @@ The following vendors are covered by the static map (`VENDOR_STATUS_MAP`) and wi
 | Resolution | status.resolution.de |
 | HeroCoders | status.herocoders.com |
 | Move Work Forward | status.moveworkforward.com |
-| Valiantys (Elements) | status.elements-apps.com |
+| Elements (formerly Valiantys nFeed) | status.elements-apps.com |
 | Deviniti | deviniti.statuspage.io |
 | Refined | status.refined.com |
 | Deiser | status.deiser.com |

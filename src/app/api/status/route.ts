@@ -11,8 +11,34 @@ import type {
   RegisteredApp,
 } from "@/types";
 import { discoverStatusUrl, normalizeVendorName } from "@/lib/status-discovery";
+import { guardOutboundUrl, redactUrl } from "@/lib/url-guard";
 
 const REQUEST_TIMEOUT_MS = 8000;
+
+// In-memory rate limiter — sized for a single Vercel/serverless instance.
+// Multi-instance deployments would need an external store, but for this
+// proxy the goal is just to stop a single client from amplifying us into
+// a fan-out fetch tool against vendor status pages.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_APPS = 600;     // total apps checked per IP per window
+const rateLimit = new Map<string, { resetAt: number; appCount: number }>();
+
+function clientIp(request: Request): string {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]?.trim() || "unknown";
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
+
+function consumeRateBudget(ip: string, appCount: number): boolean {
+  const now = Date.now();
+  const entry = rateLimit.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    rateLimit.set(ip, { resetAt: now + RATE_LIMIT_WINDOW_MS, appCount });
+    return appCount <= RATE_LIMIT_MAX_APPS;
+  }
+  entry.appCount += appCount;
+  return entry.appCount <= RATE_LIMIT_MAX_APPS;
+}
 
 // ── Type guards ─────────────────────────────────────────────────────────────
 
@@ -460,6 +486,21 @@ async function checkAppHealth(app: RegisteredApp): Promise<HealthCheckResult> {
     };
   }
 
+  // SSRF guard: refuse to fetch internal/private addresses regardless of
+  // what's stored in the user's localStorage. We return "degraded" rather
+  // than "outage" so the row is visible but does not skew uptime stats.
+  const guard = guardOutboundUrl(app.statusUrl);
+  if (!guard.ok) {
+    console.warn(`[BLOCKED] "${app.appName}" rejected: ${guard.reason} host=${redactUrl(app.statusUrl)}`);
+    return {
+      appId:         app.id,
+      status:        "degraded",
+      checkedAt:     new Date().toISOString(),
+      responseTimeMs: null,
+      message:       `Status URL blocked: ${guard.reason}`,
+    };
+  }
+
   try {
     // Statuspage: URLs may end with either status.json or summary.json.
     //   summary.json includes components[] needed for per-app matching.
@@ -520,7 +561,7 @@ async function checkAppHealth(app: RegisteredApp): Promise<HealthCheckResult> {
       const contentType = response.headers.get("content-type") ?? "";
       if (!contentType.includes("application/json")) {
         console.error(
-          `[FETCH BLOCKED] "${app.appName}" | content-type="${contentType}" — WAF/CDN returned non-JSON (HTML bot challenge?). url=${fetchUrl}`,
+          `[FETCH BLOCKED] "${app.appName}" | content-type="${contentType}" — WAF/CDN returned non-JSON (HTML bot challenge?). host=${redactUrl(fetchUrl)}`,
         );
         return {
           appId:          app.id,
@@ -601,6 +642,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Invalid request payload. Expected { apps: RegisteredApp[] }." },
         { status: 400 },
+      );
+    }
+
+    if (!consumeRateBudget(clientIp(request), apps.length)) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Try again in a minute." },
+        { status: 429, headers: { "Retry-After": "60" } },
       );
     }
 

@@ -32,6 +32,11 @@ export function AppLogo({ src, alt, className }: AppLogoProps) {
       )}
     >
       {src && !failed ? (
+        // next/image cannot be used here: vendor logos live on the Atlassian
+        // Marketplace CDN which returns 403 to non-browser referrers. Using a
+        // raw <img> with referrerPolicy="no-referrer" is the only reliable way
+        // to load these assets cross-origin.
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt}
