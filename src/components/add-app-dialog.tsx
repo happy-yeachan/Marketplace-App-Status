@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { type CheckType, type MarketplaceSearchItem, type RegisteredApp } from "@/types";
 import { guardOutboundUrl } from "@/lib/url-guard";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 interface AddAppDialogProps {
   open: boolean;
@@ -78,6 +79,7 @@ export function AddAppDialog({
   onAddApp,
   existingIds = new Set(),
 }: AddAppDialogProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query, 400);
   const [results, setResults] = useState<MarketplaceSearchItem[]>([]);
@@ -190,11 +192,10 @@ export function AddAppDialog({
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-[480px]">
         <DialogHeader className="border-b px-4 py-3">
           <DialogTitle className="text-sm font-semibold">
-            Add App from Atlassian Marketplace
+            {t("addApp.title")}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Search and click to add — status URL is auto-detected per vendor, no
-            form needed.
+            {t("addApp.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -208,7 +209,7 @@ export function AddAppDialog({
                 className="flex items-center gap-1 rounded px-1 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
-                Back
+                {t("common.back")}
               </button>
               <div className="mx-1 h-4 w-px bg-border" />
               <AppLogo src={pendingItem.logoUrl} alt={pendingItem.appName} className="h-7 w-7 shrink-0" />
@@ -216,13 +217,13 @@ export function AddAppDialog({
                 <p className="truncate text-sm font-medium leading-tight">{pendingItem.appName}</p>
                 <p className="truncate text-[11px] text-muted-foreground">{pendingItem.vendorName}</p>
               </div>
-              <span className="shrink-0 text-xs text-amber-500">No URL</span>
+              <span className="shrink-0 text-xs text-amber-500">{t("addApp.noUrlBadge")}</span>
             </div>
 
             {/* URL input */}
             <div className="px-4 py-4">
               <label className="mb-1.5 block text-xs font-medium text-foreground">
-                Status page URL <span className="font-normal text-muted-foreground">(optional)</span>
+                {t("addApp.urlLabel")} <span className="font-normal text-muted-foreground">{t("addApp.urlOptional")}</span>
               </label>
               <input
                 ref={urlInputRef}
@@ -241,8 +242,7 @@ export function AddAppDialog({
                 <p className="mt-1.5 text-[11px] text-red-500">{urlValidation.reason}</p>
               ) : (
                 <p className="mt-1.5 text-[11px] text-muted-foreground">
-                  Paste the vendor&rsquo;s /api/v2/status.json or /summary.json endpoint.
-                  Leave blank to add without monitoring.
+                  {t("addApp.urlHint")}
                 </p>
               )}
             </div>
@@ -254,14 +254,14 @@ export function AddAppDialog({
                 size="sm"
                 onClick={() => commitAdd(pendingItem)}
               >
-                Add without URL
+                {t("addApp.addWithoutUrl")}
               </Button>
               <Button
                 size="sm"
                 disabled={!customUrl || !isValidUrl(customUrl)}
                 onClick={() => commitAdd(pendingItem, customUrl)}
               >
-                Add with URL →
+                {t("addApp.addWithUrl")}
               </Button>
             </div>
           </div>
@@ -279,7 +279,7 @@ export function AddAppDialog({
                   value={query}
                   onValueChange={setQuery}
                   autoFocus
-                  placeholder="Type app name (e.g. draw.io, Zephyr, Tempo…)"
+                  placeholder={t("addApp.placeholder")}
                 />
                 {isSearching && (
                   <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
@@ -297,7 +297,7 @@ export function AddAppDialog({
               <CommandList className="max-h-[480px] min-h-[180px] overflow-y-auto p-0">
                 {showHint && (
                   <p className="px-4 py-10 text-center text-xs text-muted-foreground">
-                    Type at least 2 characters to search the Marketplace.
+                    {t("addApp.hint")}
                   </p>
                 )}
 
@@ -305,7 +305,7 @@ export function AddAppDialog({
 
                 {showEmpty && (
                   <p className="px-4 py-10 text-center text-xs text-muted-foreground">
-                    No apps found for &ldquo;{debouncedQuery}&rdquo;.
+                    {t("addApp.empty", { q: debouncedQuery })}
                   </p>
                 )}
 
@@ -346,7 +346,7 @@ export function AddAppDialog({
                                 variant="secondary"
                                 className="shrink-0 text-[10px] leading-tight"
                               >
-                                Added
+                                {t("common.added")}
                               </Badge>
                             )}
                           </div>
@@ -360,10 +360,10 @@ export function AddAppDialog({
                           {isSupported ? (
                             <span className="flex items-center gap-0.5 text-xs font-medium text-emerald-600">
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              Auto
+                              {t("addApp.autoBadge")}
                             </span>
                           ) : (
-                            <span className="text-xs text-amber-500">No URL</span>
+                            <span className="text-xs text-amber-500">{t("addApp.noUrlBadge")}</span>
                           )}
                         </div>
                       </CommandItem>
@@ -375,10 +375,8 @@ export function AddAppDialog({
             {/* Footer legend */}
             <div className="border-t bg-muted/30 px-4 py-2">
               <p className="text-[10px] text-muted-foreground">
-                <span className="font-medium text-emerald-600">Auto</span> — status
-                URL pre-mapped for this vendor. &nbsp;
-                <span className="font-medium text-amber-500">No URL</span> — click
-                to optionally enter a custom URL.
+                <span className="font-medium text-emerald-600">{t("addApp.autoBadge")}</span> — {t("addApp.legendAuto")} &nbsp;
+                <span className="font-medium text-amber-500">{t("addApp.noUrlBadge")}</span> — {t("addApp.legendNoUrl")}
               </p>
             </div>
           </>

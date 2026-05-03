@@ -22,9 +22,11 @@ import {
 } from "lucide-react";
 import { AddAppDialog } from "@/components/add-app-dialog";
 import { AppLogo } from "@/components/app-logo";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 import { QuickSetupDialog } from "@/components/quick-setup-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useTranslation } from "@/lib/i18n/use-translation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -157,11 +159,12 @@ function StatusCell({
   isUnconfigured?: boolean;
   isAdding?: boolean;
 }) {
+  const { t } = useTranslation();
   if (isUnconfigured) {
     return (
       <div className="flex items-center gap-1.5 text-muted-foreground/50">
         <CircleDashed className="h-4 w-4" />
-        <span className="text-xs">No status page</span>
+        <span className="text-xs">{t("table.noStatusPage")}</span>
       </div>
     );
   }
@@ -169,7 +172,7 @@ function StatusCell({
     return (
       <div className="flex items-center gap-1.5 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="text-xs">Checking…</span>
+        <span className="text-xs">…</span>
       </div>
     );
   }
@@ -177,7 +180,7 @@ function StatusCell({
     return (
       <div className="flex items-center gap-1.5 text-muted-foreground">
         <CircleDashed className="h-4 w-4" />
-        <span className="text-xs">Pending</span>
+        <span className="text-xs">…</span>
       </div>
     );
   }
@@ -209,7 +212,7 @@ function StatusCell({
     ),
   }[status];
 
-  const label = { operational: "Operational", degraded: "Degraded", outage: "Outage" }[status];
+  const label = t(`status.${status}`);
 
   return (
     <div className="flex items-center gap-2">
@@ -347,7 +350,7 @@ const AppRow = memo(function AppRow({
         </div>
       </TableCell>
       {/* Response — visible from lg */}
-      <TableCell className="hidden lg:table-cell tabular-nums text-sm text-muted-foreground">
+      <TableCell className="hidden lg:table-cell pl-6 tabular-nums text-sm text-muted-foreground">
         {result?.responseTimeMs != null ? `${result.responseTimeMs} ms` : "—"}
       </TableCell>
       {/* Checked — visible from xl */}
@@ -412,6 +415,7 @@ function useIsMounted(): boolean {
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 
 export function StatusDashboard() {
+  const { t } = useTranslation();
   // ── State ──────────────────────────────────────────────────────────────────
   // `isMounted` is false on the server and on the very first client render.
   // All localStorage-derived values are hidden until it becomes true, so the
@@ -804,15 +808,18 @@ export function StatusDashboard() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">
-            Atlassian Marketplace Status
+            {t("header.title")}
           </h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Real-time service health for Jira &amp; Confluence third-party apps.
+            {t("header.subtitle")}
             {lastCheckedAt && (
               <span className="ml-2 text-xs">
-                · Last checked {lastCheckedAt.toLocaleTimeString()}
+                · {t("header.lastChecked", { time: lastCheckedAt.toLocaleTimeString() })}
               </span>
             )}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground/70">
+            {t("header.disclaimer")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -823,7 +830,7 @@ export function StatusDashboard() {
             disabled={isChecking}
           >
             <RefreshCw className={cn("h-3.5 w-3.5", isChecking && "animate-spin")} />
-            Refresh
+            {t("header.refresh")}
           </Button>
           {isMounted && apps.length > 0 && (
             <Tooltip>
@@ -833,7 +840,7 @@ export function StatusDashboard() {
                   <Download className="h-3.5 w-3.5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Export app list</TooltipContent>
+              <TooltipContent side="bottom">{t("header.exportTooltip")}</TooltipContent>
             </Tooltip>
           )}
           <div className="h-4 w-px bg-border" />
@@ -843,11 +850,11 @@ export function StatusDashboard() {
             onClick={() => setQuickSetupOpen(true)}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            Quick Setup
+            {t("header.quickSetup")}
           </Button>
           <Button size="sm" onClick={() => setAddDialogOpen(true)}>
             <PlusCircle className="h-3.5 w-3.5" />
-            Add App
+            {t("header.addApp")}
           </Button>
           <div className="h-4 w-px bg-border" />
           <Tooltip>
@@ -861,8 +868,9 @@ export function StatusDashboard() {
                 <HelpCircle className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">How to use</TooltipContent>
+            <TooltipContent side="bottom">{t("header.howToUse")}</TooltipContent>
           </Tooltip>
+          <LanguageSwitcher />
           <ThemeToggle />
         </div>
       </div>
@@ -907,21 +915,21 @@ export function StatusDashboard() {
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <Badge className="gap-1.5 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/30">
               <CheckCircle2 className="h-3 w-3" />
-              Operational
+              {t("status.operational")}
               <span className="ml-0.5 font-bold">{summary.operational}</span>
             </Badge>
             <Badge className="gap-1.5 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/30">
               <CircleDashed className="h-3 w-3" />
-              Degraded
+              {t("status.degraded")}
               <span className="ml-0.5 font-bold">{summary.degraded}</span>
             </Badge>
             <Badge className="gap-1.5 bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/30">
               <AlertTriangle className="h-3 w-3" />
-              Outage
+              {t("status.outage")}
               <span className="ml-0.5 font-bold">{summary.outage}</span>
             </Badge>
             <Badge variant="outline" className="text-muted-foreground">
-              {apps.length} monitored
+              {t("status.monitored", { n: apps.length })}
             </Badge>
           </div>
 
@@ -929,18 +937,18 @@ export function StatusDashboard() {
           {apps.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/30 py-20 text-center">
               <LayoutGrid className="mb-4 h-12 w-12 text-muted-foreground/40" />
-              <h3 className="text-base font-semibold">No apps monitored</h3>
+              <h3 className="text-base font-semibold">{t("empty.title")}</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Pick the apps your team uses from a curated list, or search the Marketplace.
+                {t("empty.body")}
               </p>
               <div className="mt-6 flex gap-3">
                 <Button onClick={() => setQuickSetupOpen(true)}>
                   <Sparkles className="mr-1.5 h-4 w-4" />
-                  Quick Setup
+                  {t("header.quickSetup")}
                 </Button>
                 <Button variant="outline" onClick={() => setAddDialogOpen(true)}>
                   <PlusCircle className="mr-1.5 h-4 w-4" />
-                  Add App
+                  {t("header.addApp")}
                 </Button>
               </div>
             </div>
@@ -951,7 +959,7 @@ export function StatusDashboard() {
                   <TableRow>
                     {/* App — takes all remaining space */}
                     <SortableHead
-                      label="App"
+                      label={t("table.app")}
                       sortKey="appName"
                       active={sortKey}
                       dir={sortDir}
@@ -959,7 +967,7 @@ export function StatusDashboard() {
                     />
                     {/* Vendor — md+ */}
                     <SortableHead
-                      label="Vendor"
+                      label={t("table.vendor")}
                       sortKey="vendorName"
                       active={sortKey}
                       dir={sortDir}
@@ -968,7 +976,7 @@ export function StatusDashboard() {
                     />
                     {/* Status */}
                     <SortableHead
-                      label="Status"
+                      label={t("table.status")}
                       sortKey="status"
                       active={sortKey}
                       dir={sortDir}
@@ -977,20 +985,20 @@ export function StatusDashboard() {
                     />
                     {/* History — lg+ */}
                     <TableHead className="hidden lg:table-cell w-[200px]">
-                      History (last {BAR_COUNT})
+                      {t("table.history", { n: BAR_COUNT })}
                     </TableHead>
                     {/* Response — lg+ */}
                     <SortableHead
-                      label="Response"
+                      label={t("table.response")}
                       sortKey="responseTimeMs"
                       active={sortKey}
                       dir={sortDir}
                       onSort={handleSort}
-                      className="hidden lg:table-cell w-24"
+                      className="hidden lg:table-cell w-24 pl-6"
                     />
                     {/* Checked — xl+ */}
                     <SortableHead
-                      label="Checked"
+                      label={t("table.checked")}
                       sortKey="checkedAt"
                       active={sortKey}
                       dir={sortDir}
@@ -1038,7 +1046,7 @@ export function StatusDashboard() {
                                 unconfiguredOpen && "rotate-90",
                               )}
                             />
-                            <span>No status page</span>
+                            <span>{t("table.noStatusPage")}</span>
                             <span className="rounded-full bg-muted px-1.5 py-0.5 font-medium tabular-nums">
                               {unconfiguredApps.length}
                             </span>
@@ -1081,14 +1089,14 @@ export function StatusDashboard() {
           <Dialog open={!!deleteTarget} onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}>
             <DialogContent className="sm:max-w-sm">
               <DialogHeader>
-                <DialogTitle>Remove app</DialogTitle>
+                <DialogTitle>{t("delete.title")}</DialogTitle>
                 <DialogDescription>
-                  Remove <span className="font-medium text-foreground">{deleteTarget?.appName}</span> from your dashboard? This also clears its history.
+                  {t("delete.body", { name: deleteTarget?.appName ?? "" })}
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   variant="destructive"
@@ -1100,7 +1108,7 @@ export function StatusDashboard() {
                     }
                   }}
                 >
-                  Remove
+                  {t("common.remove")}
                 </Button>
               </DialogFooter>
             </DialogContent>

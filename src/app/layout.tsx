@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SiteFooter } from "@/components/site-footer";
+import { LocaleProvider } from "@/lib/i18n/use-translation";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -76,10 +77,12 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <TooltipProvider>
-          {children}
-          <SiteFooter />
-        </TooltipProvider>
+        <LocaleProvider>
+          <TooltipProvider>
+            {children}
+            <SiteFooter />
+          </TooltipProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

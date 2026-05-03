@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import type { PopularApp } from "@/app/api/marketplace/popular/route";
 import type { RegisteredApp } from "@/types";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 interface QuickSetupDialogProps {
   open: boolean;
@@ -67,6 +68,7 @@ export function QuickSetupDialog({
   onBulkAddApps,
   existingIds = new Set(),
 }: QuickSetupDialogProps) {
+  const { t } = useTranslation();
   const [apps, setApps] = useState<PopularApp[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -172,10 +174,10 @@ export function QuickSetupDialog({
         <DialogHeader className="border-b px-5 py-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <DialogTitle className="text-sm font-semibold">Quick Setup</DialogTitle>
+            <DialogTitle className="text-sm font-semibold">{t("quickSetup.title")}</DialogTitle>
           </div>
           <DialogDescription className="text-xs">
-            Select the apps your team uses — status URLs are auto-detected per vendor.
+            {t("quickSetup.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -192,7 +194,7 @@ export function QuickSetupDialog({
           {error && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <p className="text-sm text-muted-foreground">
-                Failed to load app list. Check your connection and try again.
+                {t("quickSetup.error")}
               </p>
             </div>
           )}
@@ -211,11 +213,11 @@ export function QuickSetupDialog({
                   className="h-4 w-4 cursor-pointer accent-primary"
                 />
                 <span className="text-xs font-medium text-muted-foreground">
-                  Select all
+                  {allSelected ? t("quickSetup.deselectAll") : t("quickSetup.selectAll")}
                 </span>
                 {selectedCount > 0 && (
                   <span className="ml-auto text-xs text-muted-foreground">
-                    {selectedCount} selected
+                    {selectedCount}
                   </span>
                 )}
               </label>
@@ -260,7 +262,7 @@ export function QuickSetupDialog({
                                 variant="secondary"
                                 className="shrink-0 text-[10px] leading-tight"
                               >
-                                Added
+                                {t("common.added")}
                               </Badge>
                             )}
                           </div>
@@ -272,10 +274,10 @@ export function QuickSetupDialog({
                           {app.statusUrl ? (
                             <span className="flex items-center gap-0.5 text-xs font-medium text-emerald-600">
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              Auto
+                              {t("addApp.autoBadge")}
                             </span>
                           ) : (
-                            <span className="text-xs text-amber-500">No URL</span>
+                            <span className="text-xs text-amber-500">{t("addApp.noUrlBadge")}</span>
                           )}
                         </div>
                       </label>
@@ -289,10 +291,10 @@ export function QuickSetupDialog({
 
         <DialogFooter className="border-t px-5 py-3">
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button size="sm" disabled={selectedCount === 0} onClick={handleAdd}>
-            Add {selectedCount > 0 ? `${selectedCount} app${selectedCount !== 1 ? "s" : ""}` : "apps"}
+            {t("quickSetup.add", { n: selectedCount })}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n/use-translation";
 
 // Subscribe to <html class="dark"> changes so toggling in another tab
 // (or via the anti-flicker script) is reflected without a setState-in-effect.
@@ -19,6 +20,7 @@ const getThemeSnapshot = () => document.documentElement.classList.contains("dark
 const getThemeServerSnapshot = () => false;
 
 export function ThemeToggle() {
+  const { t } = useTranslation();
   const dark = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getThemeServerSnapshot);
 
   const toggle = () => {
@@ -37,7 +39,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={toggle}
-      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={dark ? t("theme.toLight") : t("theme.toDark")}
       className="h-8 w-8 shrink-0"
     >
       {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
