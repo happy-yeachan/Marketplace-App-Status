@@ -76,6 +76,28 @@ const HISTORY_MAX = 30;
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 const RECHECK_COOLDOWN_MS = 90_000; // skip initial scan if last check was < 90 s ago
 const BAR_COUNT = 30;
+const STATUS_BATCH_SIZE = 50; // must match MAX_APPS_PER_REQUEST on the server
+
+async function fetchStatusBatched(apps: RegisteredApp[]): Promise<HealthCheckResponse | null> {
+  if (apps.length === 0) return null;
+  const chunks: RegisteredApp[][] = [];
+  for (let i = 0; i < apps.length; i += STATUS_BATCH_SIZE) {
+    chunks.push(apps.slice(i, i + STATUS_BATCH_SIZE));
+  }
+  const responses = await Promise.all(
+    chunks.map((chunk) =>
+      fetch("/api/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apps: chunk }),
+      })
+        .then((r) => (r.ok ? (r.json() as Promise<HealthCheckResponse>) : null))
+        .catch(() => null),
+    ),
+  );
+  const results = responses.flatMap((r) => r?.results ?? []);
+  return results.length > 0 ? { results } : null;
+}
 
 interface StatusToast {
   id: string;
@@ -586,12 +608,7 @@ export function StatusDashboard() {
     if (checkable.length === 0) return;
     const ids = checkable.map((a) => a.id);
     setAddingIds((prev) => new Set([...prev, ...ids]));
-    void fetch("/api/status", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ apps: checkable }),
-    })
-      .then((r) => (r.ok ? (r.json() as Promise<HealthCheckResponse>) : null))
+    void fetchStatusBatched(checkable)
       .then((data) => { if (data?.results) applyResultsRef.current(data.results, latestByIdRef.current); })
       .catch(() => undefined)
       .finally(() => {
@@ -673,13 +690,8 @@ export function StatusDashboard() {
     isCheckingRef.current = true;
     setIsChecking(true);
     try {
-      const res = await fetch("/api/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apps: checkableApps }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as HealthCheckResponse;
+      const data = await fetchStatusBatched(checkableApps);
+      if (!data) throw new Error("All batches failed");
       applyResults(data.results, latestByIdRef.current);
       setLastCheckedAt(new Date());
     } catch {
@@ -818,12 +830,7 @@ export function StatusDashboard() {
     if (checkableApps.length > 0) {
       const ids = checkableApps.map((a) => a.id);
       setAddingIds((prev) => new Set([...prev, ...ids]));
-      void fetch("/api/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apps: checkableApps }),
-      })
-        .then((r) => (r.ok ? (r.json() as Promise<HealthCheckResponse>) : null))
+      void fetchStatusBatched(checkableApps)
         .then((data) => { if (data?.results) applyResults(data.results, latestByIdRef.current); })
         .catch(() => undefined)
         .finally(() => {

@@ -22,6 +22,7 @@ const REQUEST_TIMEOUT_MS = 8000;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_APPS = 600;     // total apps checked per IP per window
 const RATE_LIMIT_MAX_ENTRIES = 500;  // evict expired entries beyond this size
+const MAX_APPS_PER_REQUEST = 50;     // hard cap per single request — prevents fan-out abuse
 const rateLimit = new Map<string, { resetAt: number; appCount: number }>();
 
 function clientIp(request: Request): string {
@@ -688,6 +689,13 @@ export async function POST(request: Request) {
     if (!Array.isArray(apps) || !apps.every(isRegisteredApp)) {
       return NextResponse.json(
         { error: "Invalid request payload. Expected { apps: RegisteredApp[] }." },
+        { status: 400 },
+      );
+    }
+
+    if (apps.length > MAX_APPS_PER_REQUEST) {
+      return NextResponse.json(
+        { error: `Too many apps in a single request. Maximum is ${MAX_APPS_PER_REQUEST}.` },
         { status: 400 },
       );
     }

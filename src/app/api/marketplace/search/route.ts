@@ -195,7 +195,7 @@ export async function GET(request: Request) {
   const text = (searchParams.get("query") ?? searchParams.get("q") ?? "").trim();
   const limit = Math.min(Number(searchParams.get("limit") ?? "50"), 50);
 
-  if (text.length < 2) {
+  if (text.length < 2 || text.length > 100) {
     return NextResponse.json({ items: [] });
   }
 
