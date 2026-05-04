@@ -12,26 +12,30 @@ import {
   Download,
   ExternalLink,
   HelpCircle,
+  Languages,
   LayoutGrid,
   Link2,
   Loader2,
+  Moon,
+  MoreHorizontal,
   PlusCircle,
   RefreshCw,
   Sparkles,
+  Sun,
   Trash2,
   X,
 } from "lucide-react";
 import { AddAppDialog } from "@/components/add-app-dialog";
 import { AppLogo } from "@/components/app-logo";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 import { QuickSetupDialog } from "@/components/quick-setup-dialog";
 import { ShareImportDialog } from "@/components/share-import-dialog";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useTranslation } from "@/lib/i18n/use-translation";
+import { LOCALE_LABELS, LOCALES, type Locale } from "@/lib/i18n/locales";
 import { buildShareUrl, decodeSharePayload, parseShareHash } from "@/lib/share";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -416,10 +420,25 @@ function useIsMounted(): boolean {
   return useSyncExternalStore(subscribeNoop, isMountedClient, isMountedServer);
 }
 
+// Theme helpers (replaces standalone ThemeToggle component)
+const subscribeToTheme = (notify: () => void) => {
+  const observer = new MutationObserver(notify);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  return () => observer.disconnect();
+};
+const getThemeSnapshot = () => document.documentElement.classList.contains("dark");
+const getThemeServerSnapshot = () => false;
+
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 
 export function StatusDashboard() {
-  const { t, locale } = useTranslation();
+  const { t, locale, setLocale } = useTranslation();
+  const isDark = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getThemeServerSnapshot);
+  const toggleTheme = useCallback(() => {
+    const next = !isDark;
+    document.documentElement.classList.toggle("dark", next);
+    try { localStorage.setItem("theme", next ? "dark" : "light"); } catch { /* ignore */ }
+  }, [isDark]);
   // ── State ──────────────────────────────────────────────────────────────────
   // `isMounted` is false on the server and on the very first client render.
   // All localStorage-derived values are hidden until it becomes true, so the
@@ -875,6 +894,7 @@ export function StatusDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Refresh */}
           <Button
             variant="outline"
             size="sm"
@@ -884,28 +904,41 @@ export function StatusDashboard() {
             <RefreshCw className={cn("h-3.5 w-3.5", isChecking && "animate-spin")} />
             {t("header.refresh")}
           </Button>
+
+          {/* Share / Export dropdown — only when apps exist */}
           {isMounted && apps.length > 0 && (
-            <>
-              <Tooltip>
-                <TooltipTrigger render={<span className="inline-flex" />}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleShare}>
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t("share.tooltip")}>
                     <Link2 className="h-3.5 w-3.5" />
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">{t("share.tooltip")}</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                {/* render=<span> avoids <button> inside <button> — base-ui Trigger defaults to <button> */}
-                <TooltipTrigger render={<span className="inline-flex" />}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleExport}>
-                    <Download className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">{t("header.exportTooltip")}</TooltipContent>
-              </Tooltip>
-            </>
+                }
+              />
+              <PopoverContent align="end" className="w-44 p-1">
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                >
+                  <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  {t("share.tooltip")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                >
+                  <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  {t("header.exportTooltip")}
+                </button>
+              </PopoverContent>
+            </Popover>
           )}
+
           <div className="h-4 w-px bg-border" />
+
+          {/* Quick Setup + Add App */}
           <Button
             variant="outline"
             size="sm"
@@ -918,22 +951,70 @@ export function StatusDashboard() {
             <PlusCircle className="h-3.5 w-3.5" />
             {t("header.addApp")}
           </Button>
+
           <div className="h-4 w-px bg-border" />
-          <Tooltip>
-            <TooltipTrigger render={<span className="inline-flex" />}>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
+
+          {/* More menu: How to use + Language + Theme */}
+          <Popover>
+            <PopoverTrigger
+              render={
+                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More options">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              }
+            />
+            <PopoverContent align="end" className="w-48 p-1">
+              {/* How to use */}
+              <button
+                type="button"
                 onClick={() => setOnboardingOpen(true)}
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
               >
-                <HelpCircle className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">{t("header.howToUse")}</TooltipContent>
-          </Tooltip>
-          <LanguageSwitcher />
-          <ThemeToggle />
+                <HelpCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                {t("header.howToUse")}
+              </button>
+
+              <div className="my-1 h-px bg-border" />
+
+              {/* Language */}
+              <div className="px-2 pb-1 pt-0.5">
+                <p className="mb-1 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Languages className="h-3 w-3" />
+                  {t("common.language")}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {LOCALES.map((l: Locale) => (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => setLocale(l)}
+                      className={cn(
+                        "rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-accent",
+                        locale === l ? "bg-accent font-semibold" : "text-muted-foreground",
+                      )}
+                    >
+                      {LOCALE_LABELS[l]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="my-1 h-px bg-border" />
+
+              {/* Theme */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              >
+                {isDark
+                  ? <Sun className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  : <Moon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                }
+                {isDark ? t("theme.toLight") : t("theme.toDark")}
+              </button>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
