@@ -79,6 +79,11 @@ export const PRODUCT_RULES: Array<{ keywords: string[]; vendor?: string; url: st
 
   // ── Adaptavist ───────────────────────────────────────────────────────────
   { keywords: ["scriptrunner"],                     url: "https://status.connect.adaptavist.com/api/v2/summary.json" },
+
+  // ── monday.com integrations ───────────────────────────────────────────────
+  // Apps like "monday.com for Confluence" are third-party connectors; the
+  // relevant status page is monday.com's own, not the connector vendor's.
+  { keywords: ["monday.com"],                       url: "https://status.monday.com/api/v2/status.json" },
 ];
 
 /**
@@ -199,8 +204,9 @@ export const VENDOR_BLACKLIST = new Set([
   "reliex",
   "ease solutions",
   "open source consulting",
-  "decadis",   // status.decadis.com NXDOMAIN; decadis.statuspage.io is private (401)
-  "meta-inf",  // no public status page found at any candidate URL (probed 2026-05-03)
+  "decadis",            // status.decadis.com NXDOMAIN; decadis.statuspage.io is private (401)
+  "meta-inf",           // no public status page found at any candidate URL (probed 2026-05-03)
+  "reichert network solutions",  // connector/integration vendor — no own status page
 ]);
 
 export function lookupVendorStatus(vendorName: string): VendorStatusConfig | null {
