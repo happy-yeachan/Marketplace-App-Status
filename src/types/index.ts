@@ -202,7 +202,6 @@ export const VENDOR_BLACKLIST = new Set([
   "open source consulting",
   "decadis",            // status.decadis.com NXDOMAIN; decadis.statuspage.io is private (401)
   "meta-inf",           // no public status page found at any candidate URL (probed 2026-05-03)
-  "reichert network solutions",  // connector/integration vendor — no own status page
 ]);
 
 export function lookupVendorStatus(vendorName: string): VendorStatusConfig | null {
