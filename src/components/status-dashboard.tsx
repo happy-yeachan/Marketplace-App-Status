@@ -70,8 +70,11 @@ import type {
 
 const APPS_KEY = "jira-marketplace-apps";
 const HISTORY_KEY = "jira-marketplace-history";
+const LATEST_KEY = "jira-marketplace-latest";
+const LAST_CHECKED_KEY = "jira-marketplace-last-checked";
 const HISTORY_MAX = 30;
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
+const RECHECK_COOLDOWN_MS = 90_000; // skip initial scan if last check was < 90 s ago
 const BAR_COUNT = 30;
 
 interface StatusToast {
@@ -471,7 +474,16 @@ export function StatusDashboard() {
     }
     return {};
   });
-  const [latestById, setLatestById] = useState<Record<string, HealthCheckResult>>({});
+  const [latestById, setLatestById] = useState<Record<string, HealthCheckResult>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(LATEST_KEY);
+      if (raw) return JSON.parse(raw) as Record<string, HealthCheckResult>;
+    } catch {
+      localStorage.removeItem(LATEST_KEY);
+    }
+    return {};
+  });
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const [isChecking, setIsChecking] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("status");
@@ -495,7 +507,14 @@ export function StatusDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<RegisteredApp | null>(null);
   const [toasts, setToasts] = useState<StatusToast[]>([]);
   const [notices, setNotices] = useState<{ id: string; message: string }[]>([]);
-  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(LAST_CHECKED_KEY);
+      if (raw) return new Date(raw);
+    } catch {}
+    return null;
+  });
   const [shareImportApps, setShareImportApps] = useState<RegisteredApp[] | null>(null);
 
   // Use a ref so async callbacks always read the latest apps value
@@ -514,6 +533,16 @@ export function StatusDashboard() {
   useEffect(() => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(historyById));
   }, [historyById]);
+
+  useEffect(() => {
+    localStorage.setItem(LATEST_KEY, JSON.stringify(latestById));
+  }, [latestById]);
+
+  useEffect(() => {
+    if (lastCheckedAt) {
+      try { localStorage.setItem(LAST_CHECKED_KEY, lastCheckedAt.toISOString()); } catch { /* ignore */ }
+    }
+  }, [lastCheckedAt]);
 
   // ── Share-via-URL ──────────────────────────────────────────────────────────
 
@@ -698,13 +727,18 @@ export function StatusDashboard() {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  // Initial health check fires after mount so the real table is visible first.
-  // checkAllStatuses calls setState internally, but it's an async function — the
-  // setState happens after a microtask boundary, not synchronously in the effect
-  // body. The `set-state-in-effect` rule sees the call and warns regardless;
-  // disabling here is safe.
+  // Initial health check fires after mount, but is skipped if a check ran
+  // recently (e.g. user navigated away and back quickly). Cached results from
+  // localStorage are shown immediately while the user waits.
   // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
-  useEffect(() => { if (isMounted) void checkAllStatuses(); }, [isMounted]);
+  useEffect(() => {
+    if (!isMounted) return;
+    try {
+      const raw = localStorage.getItem(LAST_CHECKED_KEY);
+      if (raw && Date.now() - new Date(raw).getTime() < RECHECK_COOLDOWN_MS) return;
+    } catch { /* ignore */ }
+    void checkAllStatuses();
+  }, [isMounted]);
 
   // (Onboarding auto-open is handled by the lazy initializer of `onboardingOpen`
   // above — no effect needed.)
