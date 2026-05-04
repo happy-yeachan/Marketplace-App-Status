@@ -22,6 +22,7 @@ interface QuickSetupDialogProps {
   onOpenChange: (open: boolean) => void;
   onBulkAddApps: (apps: RegisteredApp[]) => void;
   existingIds?: Set<string>;
+  existingNames?: Set<string>;
 }
 
 const CATEGORY_ORDER = [
@@ -67,6 +68,7 @@ export function QuickSetupDialog({
   onOpenChange,
   onBulkAddApps,
   existingIds = new Set(),
+  existingNames = new Set(),
 }: QuickSetupDialogProps) {
   const { t } = useTranslation();
   const [apps, setApps] = useState<PopularApp[]>([]);
@@ -83,7 +85,7 @@ export function QuickSetupDialog({
       setSelected(
         new Set(
           apps
-            .filter((a) => a.statusUrl !== "" && !existingIds.has(a.id))
+            .filter((a) => a.statusUrl !== "" && !existingIds.has(a.id) && !existingNames.has(a.appName.toLowerCase()))
             .map((a) => a.id),
         ),
       );
@@ -105,7 +107,7 @@ export function QuickSetupDialog({
         setSelected(
           new Set(
             fetched
-              .filter((a) => a.statusUrl !== "" && !existingIds.has(a.id))
+              .filter((a) => a.statusUrl !== "" && !existingIds.has(a.id) && !existingNames.has(a.appName.toLowerCase()))
               .map((a) => a.id),
           ),
         );
@@ -114,7 +116,7 @@ export function QuickSetupDialog({
       .finally(() => setLoading(false));
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addableApps = apps.filter((a) => !existingIds.has(a.id));
+  const addableApps = apps.filter((a) => !existingIds.has(a.id) && !existingNames.has(a.appName.toLowerCase()));
   const selectableIds = new Set(addableApps.map((a) => a.id));
 
   const allSelected =
@@ -144,7 +146,7 @@ export function QuickSetupDialog({
 
   const handleAdd = () => {
     const toAdd = apps
-      .filter((a) => selected.has(a.id) && !existingIds.has(a.id))
+      .filter((a) => selected.has(a.id) && !existingIds.has(a.id) && !existingNames.has(a.appName.toLowerCase()))
       .map(
         (a): RegisteredApp => ({
           id: a.id,
@@ -231,7 +233,7 @@ export function QuickSetupDialog({
                     {cat}
                   </div>
                   {catApps.map((app) => {
-                    const isAdded = existingIds.has(app.id);
+                    const isAdded = existingIds.has(app.id) || existingNames.has(app.appName.toLowerCase());
                     const isChecked = selected.has(app.id);
                     return (
                       <label

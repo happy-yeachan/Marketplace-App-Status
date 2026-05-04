@@ -802,6 +802,7 @@ export function StatusDashboard() {
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const existingIds = useMemo(() => new Set(apps.map((a) => a.id)), [apps]);
+  const existingNames = useMemo(() => new Set(apps.map((a) => a.appName.toLowerCase())), [apps]);
 
   const summary = useMemo(() => {
     const vals = Object.values(latestById);
@@ -1242,6 +1243,7 @@ export function StatusDashboard() {
             onOpenChange={setQuickSetupOpen}
             onBulkAddApps={handleBulkAddApps}
             existingIds={existingIds}
+            existingNames={existingNames}
           />
 
           {/* Delete confirmation */}
