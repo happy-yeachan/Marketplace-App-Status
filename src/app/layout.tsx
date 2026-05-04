@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SiteFooter } from "@/components/site-footer";
 import { LocaleProvider } from "@/lib/i18n/use-translation";
@@ -68,15 +69,16 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        {/* Prevent dark-mode flash — runs before React hydration */}
-        <script
+      <head />
+      <body className="min-h-full flex flex-col">
+        {/* Prevent dark-mode flash — must run before React hydration */}
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem('theme');var p=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(t===null&&p))document.documentElement.classList.add('dark');}catch(e){}`,
           }}
         />
-      </head>
-      <body className="min-h-full flex flex-col">
         <LocaleProvider>
           <TooltipProvider>
             {children}

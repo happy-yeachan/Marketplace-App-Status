@@ -474,16 +474,7 @@ export function StatusDashboard() {
     }
     return {};
   });
-  const [latestById, setLatestById] = useState<Record<string, HealthCheckResult>>(() => {
-    if (typeof window === "undefined") return {};
-    try {
-      const raw = localStorage.getItem(LATEST_KEY);
-      if (raw) return JSON.parse(raw) as Record<string, HealthCheckResult>;
-    } catch {
-      localStorage.removeItem(LATEST_KEY);
-    }
-    return {};
-  });
+  const [latestById, setLatestById] = useState<Record<string, HealthCheckResult>>({});
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const [isChecking, setIsChecking] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("status");
@@ -507,14 +498,7 @@ export function StatusDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<RegisteredApp | null>(null);
   const [toasts, setToasts] = useState<StatusToast[]>([]);
   const [notices, setNotices] = useState<{ id: string; message: string }[]>([]);
-  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const raw = localStorage.getItem(LAST_CHECKED_KEY);
-      if (raw) return new Date(raw);
-    } catch {}
-    return null;
-  });
+  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   const [shareImportApps, setShareImportApps] = useState<RegisteredApp[] | null>(null);
 
   // Use a ref so async callbacks always read the latest apps value
@@ -543,6 +527,23 @@ export function StatusDashboard() {
       try { localStorage.setItem(LAST_CHECKED_KEY, lastCheckedAt.toISOString()); } catch { /* ignore */ }
     }
   }, [lastCheckedAt]);
+
+  // ── Restore cached results after hydration ─────────────────────────────────
+  // latestById and lastCheckedAt are intentionally NOT set via lazy initializer
+  // to avoid a server/client hydration mismatch. Instead we load them here,
+  // after React has finished hydrating, so both renders start from the same
+  // empty state and the cache is applied in a single post-hydration commit.
+  useEffect(() => {
+    try {
+      const rawLatest = localStorage.getItem(LATEST_KEY);
+      if (rawLatest) setLatestById(JSON.parse(rawLatest) as Record<string, HealthCheckResult>);
+    } catch { /* ignore corrupt cache */ }
+    try {
+      const rawTs = localStorage.getItem(LAST_CHECKED_KEY);
+      if (rawTs) setLastCheckedAt(new Date(rawTs));
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once after mount — deps intentionally empty
 
   // ── Share-via-URL ──────────────────────────────────────────────────────────
 
