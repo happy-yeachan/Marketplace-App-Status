@@ -93,6 +93,15 @@ const en: Translations = {
   "footer.privacy": "Privacy",
   "footer.terms": "Terms",
 
+  // Share
+  "share.tooltip": "Share app list",
+  "share.copied": "Link copied!",
+  "share.importTitle": "Shared app list",
+  "share.importDesc": "{count} apps were shared with you. Import them to your dashboard?",
+  "share.importButton": "Import",
+  "share.importSuccess": "{count} apps imported.",
+  "share.importDuplicate": "{added} apps imported, {skipped} already in your list.",
+
   // Theme
   "theme.toLight": "Switch to light mode",
   "theme.toDark": "Switch to dark mode",
@@ -228,6 +237,15 @@ const ja: Translations = {
   "footer.privacy": "プライバシー",
   "footer.terms": "利用規約",
 
+  // Share
+  "share.tooltip": "アプリリストを共有",
+  "share.copied": "リンクをコピーしました！",
+  "share.importTitle": "共有されたアプリリスト",
+  "share.importDesc": "{count} 件のアプリが共有されました。ダッシュボードにインポートしますか？",
+  "share.importButton": "インポート",
+  "share.importSuccess": "{count} 件のアプリをインポートしました。",
+  "share.importDuplicate": "{added} 件をインポート、{skipped} 件はすでに追加済みです。",
+
   // Theme
   "theme.toLight": "ライトモードに切替",
   "theme.toDark": "ダークモードに切替",
@@ -251,6 +269,8 @@ const ja: Translations = {
   "privacy.cookiesBody": "Cookie は使用しません。第三者の分析や広告トラッカーも導入していません。クライアントサイドの保存先は上記の localStorage のみです。",
   "privacy.contactHeading": "お問い合わせ",
   "privacy.contactBody": "本ポリシーに関するお問い合わせは、プロジェクトの GitHub リポジトリで Issue を作成いただくか、リポジトリ README の連絡先からご連絡ください。",
+  "privacy.jurisdictionHeading": "個人情報の保護に関する法律（APPI）に基づく情報",
+  "privacy.jurisdictionBody": "本サービスは個人情報の保護に関する法律（APPI）に準拠します。本サービスはユーザーの個人情報を収集・保存しませんが、レート制限のため IP アドレスをサーバーメモリ上で一時的に処理します。この処理は同法の「個人情報」には該当しません。本ポリシーに関するお問い合わせは GitHub のリポジトリからご連絡ください。",
   "privacy.back": "← ダッシュボードに戻る",
 
   // Terms
@@ -363,6 +383,15 @@ const de: Translations = {
   "footer.privacy": "Datenschutz",
   "footer.terms": "Nutzungsbedingungen",
 
+  // Share
+  "share.tooltip": "App-Liste teilen",
+  "share.copied": "Link kopiert!",
+  "share.importTitle": "Geteilte App-Liste",
+  "share.importDesc": "{count} Apps wurden mit Ihnen geteilt. In Ihr Dashboard importieren?",
+  "share.importButton": "Importieren",
+  "share.importSuccess": "{count} Apps importiert.",
+  "share.importDuplicate": "{added} Apps importiert, {skipped} bereits in Ihrer Liste.",
+
   // Theme
   "theme.toLight": "Zum hellen Modus wechseln",
   "theme.toDark": "Zum dunklen Modus wechseln",
@@ -386,6 +415,8 @@ const de: Translations = {
   "privacy.cookiesBody": "Wir setzen keine Cookies. Wir verwenden keine Drittanbieter-Analyse oder Werbe-Tracker. Der einzige clientseitige Speicher ist das oben beschriebene localStorage.",
   "privacy.contactHeading": "Kontakt",
   "privacy.contactBody": "Fragen zu dieser Erklärung? Eröffnen Sie ein Issue im GitHub-Repository des Projekts oder nutzen Sie den Kontakt-Link in der README.",
+  "privacy.jurisdictionHeading": "Informationen gemäß DSGVO",
+  "privacy.jurisdictionBody": "Dieser Dienst richtet sich u. a. an Nutzer in der EU/EWR und verarbeitet personenbezogene Daten gemäß der Datenschutz-Grundverordnung (DSGVO). Die einzige transiente Verarbeitung ist Ihre IP-Adresse für das Rate-Limiting (60 Sekunden, 600 Anfragen). Sie wird weder gespeichert noch weitergegeben. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Absicherung des Dienstes).",
   "privacy.back": "← Zurück zum Dashboard",
 
   // Terms
@@ -498,6 +529,15 @@ const ko: Translations = {
   "footer.privacy": "개인정보처리방침",
   "footer.terms": "이용약관",
 
+  // Share
+  "share.tooltip": "앱 목록 공유",
+  "share.copied": "링크가 복사됐습니다!",
+  "share.importTitle": "공유된 앱 목록",
+  "share.importDesc": "{count}개의 앱이 공유됐습니다. 대시보드에 가져올까요?",
+  "share.importButton": "가져오기",
+  "share.importSuccess": "{count}개 앱을 가져왔습니다.",
+  "share.importDuplicate": "{added}개 가져옴, {skipped}개는 이미 추가돼 있습니다.",
+
   // Theme
   "theme.toLight": "라이트 모드로 전환",
   "theme.toDark": "다크 모드로 전환",
@@ -521,6 +561,8 @@ const ko: Translations = {
   "privacy.cookiesBody": "쿠키를 설정하지 않습니다. 제3자 분석·광고 트래커도 사용하지 않습니다. 클라이언트 측 저장소는 위에서 설명한 localStorage뿐입니다.",
   "privacy.contactHeading": "문의",
   "privacy.contactBody": "본 방침에 대한 문의는 프로젝트 GitHub 저장소에 이슈를 등록하시거나 README의 연락처로 연락 주십시오.",
+  "privacy.jurisdictionHeading": "개인정보 보호법(PIPA) 안내",
+  "privacy.jurisdictionBody": "본 서비스는 대한민국 개인정보 보호법을 준수합니다. 회원 가입, 로그인, 개인정보 수집을 일체 하지 않습니다. 다만 서비스 남용 방지를 위한 요청 빈도 제한(IP 기반, 60초 창 600건) 목적으로 IP 주소를 서버 메모리에서 일시적으로 처리하며, 디스크 저장 및 제3자 제공은 하지 않습니다. 본 정책에 대한 문의는 프로젝트 GitHub 저장소를 통해 연락 바랍니다.",
   "privacy.back": "← 대시보드로 돌아가기",
 
   // Terms
@@ -633,6 +675,15 @@ const fr: Translations = {
   "footer.privacy": "Confidentialité",
   "footer.terms": "Conditions",
 
+  // Share
+  "share.tooltip": "Partager la liste d'apps",
+  "share.copied": "Lien copié !",
+  "share.importTitle": "Liste d'apps partagée",
+  "share.importDesc": "{count} apps ont été partagées avec vous. Les importer dans votre dashboard ?",
+  "share.importButton": "Importer",
+  "share.importSuccess": "{count} apps importées.",
+  "share.importDuplicate": "{added} apps importées, {skipped} déjà dans votre liste.",
+
   // Theme
   "theme.toLight": "Passer au mode clair",
   "theme.toDark": "Passer au mode sombre",
@@ -656,6 +707,8 @@ const fr: Translations = {
   "privacy.cookiesBody": "Nous ne plaçons aucun cookie. Nous n'utilisons aucun traceur d'analytics ou publicitaire tiers. Le seul stockage côté client est le localStorage décrit ci-dessus.",
   "privacy.contactHeading": "Contact",
   "privacy.contactBody": "Des questions sur cette politique ? Ouvrez un ticket sur le dépôt GitHub du projet ou utilisez le lien de contact dans le README.",
+  "privacy.jurisdictionHeading": "Informations au titre du RGPD",
+  "privacy.jurisdictionBody": "Ce service est accessible depuis l'UE/EEE et traite les données personnelles conformément au Règlement Général sur la Protection des Données (RGPD). Le seul traitement transitoire est votre adresse IP pour la limitation de débit (fenêtre de 60 secondes, 600 requêtes). Elle n'est ni persistée ni transmise à des tiers. Base légale : Art. 6 §1 f) RGPD (intérêt légitime à la sécurisation du service).",
   "privacy.back": "← Retour au dashboard",
 
   // Terms

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/use-translation";
 
 export default function PrivacyPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const hasJurisdictionSection = (["ja", "de", "ko", "fr"] as string[]).includes(locale);
   return (
     <article className="mx-auto max-w-3xl px-6 py-16 text-sm leading-7">
       <header className="mb-10">
@@ -45,6 +46,13 @@ export default function PrivacyPage() {
         <h2 className="text-base font-semibold">{t("privacy.cookiesHeading")}</h2>
         <p>{t("privacy.cookiesBody")}</p>
       </section>
+
+      {hasJurisdictionSection && (
+        <section className="mt-8 space-y-4">
+          <h2 className="text-base font-semibold">{t("privacy.jurisdictionHeading")}</h2>
+          <p>{t("privacy.jurisdictionBody")}</p>
+        </section>
+      )}
 
       <section className="mt-8 space-y-4">
         <h2 className="text-base font-semibold">{t("privacy.contactHeading")}</h2>

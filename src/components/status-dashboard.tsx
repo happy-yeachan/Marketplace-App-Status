@@ -13,6 +13,7 @@ import {
   ExternalLink,
   HelpCircle,
   LayoutGrid,
+  Link2,
   Loader2,
   PlusCircle,
   RefreshCw,
@@ -25,8 +26,10 @@ import { AppLogo } from "@/components/app-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 import { QuickSetupDialog } from "@/components/quick-setup-dialog";
+import { ShareImportDialog } from "@/components/share-import-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTranslation } from "@/lib/i18n/use-translation";
+import { buildShareUrl, decodeSharePayload, parseShareHash } from "@/lib/share";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -307,6 +310,7 @@ const AppRow = memo(function AppRow({
   dimmed?: boolean;
   isAdding?: boolean;
 }) {
+  const { locale } = useTranslation();
   const pct = uptimePct(history);
   const statusPageUrl = toStatusPageUrl(app.statusUrl);
   return (
@@ -355,7 +359,7 @@ const AppRow = memo(function AppRow({
       </TableCell>
       {/* Checked — visible from xl */}
       <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">
-        {result?.checkedAt ? new Date(result.checkedAt).toLocaleTimeString() : "—"}
+        {result?.checkedAt ? new Date(result.checkedAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }) : "—"}
       </TableCell>
       {/* Delete — always visible, faint until hover */}
       <TableCell className="w-12 text-right">
@@ -415,7 +419,7 @@ function useIsMounted(): boolean {
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 
 export function StatusDashboard() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   // ── State ──────────────────────────────────────────────────────────────────
   // `isMounted` is false on the server and on the very first client render.
   // All localStorage-derived values are hidden until it becomes true, so the
@@ -471,7 +475,9 @@ export function StatusDashboard() {
   });
   const [deleteTarget, setDeleteTarget] = useState<RegisteredApp | null>(null);
   const [toasts, setToasts] = useState<StatusToast[]>([]);
+  const [notices, setNotices] = useState<{ id: string; message: string }[]>([]);
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
+  const [shareImportApps, setShareImportApps] = useState<RegisteredApp[] | null>(null);
 
   // Use a ref so async callbacks always read the latest apps value
   const appsRef = useRef(apps);
@@ -489,6 +495,43 @@ export function StatusDashboard() {
   useEffect(() => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(historyById));
   }, [historyById]);
+
+  // ── Share-via-URL ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const payload = parseShareHash();
+    if (!payload) return;
+    const decoded = decodeSharePayload(payload);
+    if (decoded && decoded.length > 0) setShareImportApps(decoded);
+    // Strip the hash so refreshing doesn't re-trigger the dialog
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, []);
+
+  const addNotice = useCallback((message: string) => {
+    const id = crypto.randomUUID();
+    setNotices((prev) => [...prev, { id, message }]);
+    setTimeout(() => setNotices((prev) => prev.filter((n) => n.id !== id)), 3000);
+  }, []);
+
+  const handleShare = useCallback(() => {
+    const url = buildShareUrl(apps);
+    navigator.clipboard.writeText(url).then(() => addNotice(t("share.copied")));
+  }, [apps, t, addNotice]);
+
+  const handleShareImport = useCallback((incoming: RegisteredApp[]) => {
+    setApps((prev) => {
+      const existingNames = new Set(prev.map((a) => a.appName.toLowerCase()));
+      const fresh = incoming.filter((a) => !existingNames.has(a.appName.toLowerCase()));
+      const skipped = incoming.length - fresh.length;
+      const message =
+        skipped > 0
+          ? t("share.importDuplicate", { added: fresh.length, skipped })
+          : t("share.importSuccess", { count: fresh.length });
+      addNotice(message);
+      return [...prev, ...fresh];
+    });
+    setShareImportApps(null);
+  }, [t, addNotice]);
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -802,6 +845,15 @@ export function StatusDashboard() {
             </button>
           </div>
         ))}
+        {notices.map((n) => (
+          <div
+            key={n.id}
+            className="pointer-events-auto flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5 shadow-lg text-sm"
+          >
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+            <span>{n.message}</span>
+          </div>
+        ))}
       </div>
 
       {/* Header */}
@@ -814,7 +866,7 @@ export function StatusDashboard() {
             {t("header.subtitle")}
             {lastCheckedAt && (
               <span className="ml-2 text-xs">
-                · {t("header.lastChecked", { time: lastCheckedAt.toLocaleTimeString() })}
+                · {t("header.lastChecked", { time: lastCheckedAt.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }) })}
               </span>
             )}
           </p>
@@ -833,15 +885,25 @@ export function StatusDashboard() {
             {t("header.refresh")}
           </Button>
           {isMounted && apps.length > 0 && (
-            <Tooltip>
-              {/* render=<span> avoids <button> inside <button> — base-ui Trigger defaults to <button> */}
-              <TooltipTrigger render={<span className="inline-flex" />}>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleExport}>
-                  <Download className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{t("header.exportTooltip")}</TooltipContent>
-            </Tooltip>
+            <>
+              <Tooltip>
+                <TooltipTrigger render={<span className="inline-flex" />}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleShare}>
+                    <Link2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{t("share.tooltip")}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                {/* render=<span> avoids <button> inside <button> — base-ui Trigger defaults to <button> */}
+                <TooltipTrigger render={<span className="inline-flex" />}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleExport}>
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{t("header.exportTooltip")}</TooltipContent>
+              </Tooltip>
+            </>
           )}
           <div className="h-4 w-px bg-border" />
           <Button
@@ -1118,6 +1180,13 @@ export function StatusDashboard() {
             open={onboardingOpen}
             onOpenChange={setOnboardingOpen}
           />
+          {shareImportApps && (
+            <ShareImportDialog
+              apps={shareImportApps}
+              onImport={handleShareImport}
+              onClose={() => setShareImportApps(null)}
+            />
+          )}
         </>
       )}
     </main>
