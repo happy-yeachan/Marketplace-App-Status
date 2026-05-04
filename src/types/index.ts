@@ -80,10 +80,6 @@ export const PRODUCT_RULES: Array<{ keywords: string[]; vendor?: string; url: st
   // ── Adaptavist ───────────────────────────────────────────────────────────
   { keywords: ["scriptrunner"],                     url: "https://status.connect.adaptavist.com/api/v2/summary.json" },
 
-  // ── monday.com integrations ───────────────────────────────────────────────
-  // Apps like "monday.com for Confluence" are third-party connectors; the
-  // relevant status page is monday.com's own, not the connector vendor's.
-  { keywords: ["monday.com"],                       url: "https://status.monday.com/api/v2/status.json" },
 ];
 
 /**
