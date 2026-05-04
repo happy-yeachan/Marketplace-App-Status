@@ -1,6 +1,7 @@
 import type { CheckType, RegisteredApp } from "@/types";
 
 interface ShareEntry {
+  i: string;   // id (Marketplace app key — preserves Quick Setup detection)
   n: string;   // appName
   v: string;   // vendorName
   u: string;   // statusUrl
@@ -10,6 +11,7 @@ interface ShareEntry {
 
 export function encodeSharePayload(apps: RegisteredApp[]): string {
   const entries: ShareEntry[] = apps.map((a) => ({
+    i: a.id,
     n: a.appName,
     v: a.vendorName,
     u: a.statusUrl,
@@ -31,7 +33,7 @@ export function decodeSharePayload(encoded: string): RegisteredApp[] | null {
     if (!Array.isArray(entries)) return null;
     return entries
       .map((e) => ({
-        id: crypto.randomUUID(),
+        id: e.i || crypto.randomUUID(),
         appName: e.n ?? "",
         vendorName: e.v ?? "",
         statusUrl: e.u ?? "",
