@@ -538,18 +538,34 @@ export function StatusDashboard() {
   }, [apps, t, addNotice]);
 
   const handleShareImport = useCallback((incoming: RegisteredApp[]) => {
-    setApps((prev) => {
-      const existingNames = new Set(prev.map((a) => a.appName.toLowerCase()));
-      const fresh = incoming.filter((a) => !existingNames.has(a.appName.toLowerCase()));
-      const skipped = incoming.length - fresh.length;
-      const message =
-        skipped > 0
-          ? t("share.importDuplicate", { added: fresh.length, skipped })
-          : t("share.importSuccess", { count: fresh.length });
-      addNotice(message);
-      return [...prev, ...fresh];
-    });
+    const existingNames = new Set(appsRef.current.map((a) => a.appName.toLowerCase()));
+    const fresh = incoming.filter((a) => !existingNames.has(a.appName.toLowerCase()));
+    const skipped = incoming.length - fresh.length;
+    const message =
+      skipped > 0
+        ? t("share.importDuplicate", { added: fresh.length, skipped })
+        : t("share.importSuccess", { count: fresh.length });
+
+    setApps((prev) => [...prev, ...fresh]);
+    addNotice(message);
     setShareImportApps(null);
+
+    // Auto-check imported apps (same pattern as handleBulkAddApps)
+    const checkable = fresh.filter((a) => a.statusUrl);
+    if (checkable.length === 0) return;
+    const ids = checkable.map((a) => a.id);
+    setAddingIds((prev) => new Set([...prev, ...ids]));
+    void fetch("/api/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ apps: checkable }),
+    })
+      .then((r) => (r.ok ? (r.json() as Promise<HealthCheckResponse>) : null))
+      .then((data) => { if (data?.results) applyResultsRef.current(data.results, latestByIdRef.current); })
+      .catch(() => undefined)
+      .finally(() => {
+        setAddingIds((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
+      });
   }, [t, addNotice]);
 
   const dismissToast = useCallback((id: string) => {
@@ -614,6 +630,10 @@ export function StatusDashboard() {
   const latestByIdRef = useRef<Record<string, HealthCheckResult>>({});
   useEffect(() => { latestByIdRef.current = latestById; }, [latestById]);
 
+  // Stable ref so callbacks declared before applyResults can call it
+  const applyResultsRef = useRef(applyResults);
+  useEffect(() => { applyResultsRef.current = applyResults; }, [applyResults]);
+
   const checkAllStatuses = async () => {
     const appsList = appsRef.current;
     const checkableApps = appsList.filter((a) => a.statusUrl);
@@ -633,9 +653,12 @@ export function StatusDashboard() {
       setLatestById((prev) => {
         const next = { ...prev };
         for (const app of checkableApps) {
-          if (!next[app.id]) {
+          // Only mark as outage if the app had a previous result.
+          // Brand-new apps (no prior result) stay unknown — avoids false outages
+          // on first add when the check request fails (e.g. cold start / timeout).
+          if (prev[app.id] && !addingIds.has(app.id)) {
             next[app.id] = {
-              appId: app.id,
+              ...prev[app.id],
               status: "outage",
               checkedAt: new Date().toISOString(),
               responseTimeMs: null,
@@ -963,7 +986,7 @@ export function StatusDashboard() {
                 </Button>
               }
             />
-            <PopoverContent align="end" className="w-48 p-1">
+            <PopoverContent align="end" className="w-44 p-1">
               {/* How to use */}
               <button
                 type="button"
@@ -976,28 +999,21 @@ export function StatusDashboard() {
 
               <div className="my-1 h-px bg-border" />
 
-              {/* Language */}
-              <div className="px-2 pb-1 pt-0.5">
-                <p className="mb-1 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <Languages className="h-3 w-3" />
-                  {t("common.language")}
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {LOCALES.map((l: Locale) => (
-                    <button
-                      key={l}
-                      type="button"
-                      onClick={() => setLocale(l)}
-                      className={cn(
-                        "rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-accent",
-                        locale === l ? "bg-accent font-semibold" : "text-muted-foreground",
-                      )}
-                    >
-                      {LOCALE_LABELS[l]}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* Language — standard list items */}
+              {LOCALES.map((l: Locale) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => setLocale(l)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
+                    locale === l && "font-semibold",
+                  )}
+                >
+                  {LOCALE_LABELS[l]}
+                  {locale === l && <span className="text-xs text-muted-foreground">●</span>}
+                </button>
+              ))}
 
               <div className="my-1 h-px bg-border" />
 
