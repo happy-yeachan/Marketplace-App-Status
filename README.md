@@ -394,49 +394,22 @@ Vendors confirmed to have no public status page (`VENDOR_BLACKLIST`): `k15t`, `m
 
 ---
 
-## Getting Started
+## Self-hosting
 
-### Prerequisites
-
-- Node.js 18+
-- npm 9+
-
-### Installation
+Requires a Next.js-compatible host (Vercel recommended) for the server-side API routes. Pure static hosts (GitHub Pages, Cloudflare Pages without Workers) are not supported.
 
 ```bash
 git clone https://github.com/happy-yeachan/Marketplace-App-Status.git
 cd Marketplace-App-Status
 npm install
+npm run dev   # http://localhost:3000
 ```
-
-### Development
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-### Production Build
-
-```bash
-npm run build
-npm start
-```
-
-No environment variables required. The app uses only public APIs (Atlassian Marketplace REST API v2 and vendor status pages).
-
-### Deployment
-
-The app requires a Next.js-compatible host for its server-side API routes. **Vercel** is the recommended platform — connect the repository and deploy with zero configuration.
-
-Pure static hosts (GitHub Pages, Cloudflare Pages without Workers) are not supported because `/api/status` and `/api/marketplace/*` are server-side route handlers.
 
 **Environment variables (optional):**
 
 | Variable | Default | Description |
 |---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | `https://marketplace-app-status.vercel.app` | Used for canonical URL, OG tags, sitemap |
+| `NEXT_PUBLIC_SITE_URL` | `https://marketplace.yeachan.cloud` | Used for canonical URL, OG tags, sitemap |
 
 ---
 
