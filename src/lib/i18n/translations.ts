@@ -92,6 +92,7 @@ const en: Translations = {
   "footer.line": "Marketplace App Status — independent project, not affiliated with Atlassian.",
   "footer.privacy": "Privacy",
   "footer.terms": "Terms",
+  "footer.feedback": "Feedback",
 
   // Share
   "share.tooltip": "Share app list",
@@ -236,6 +237,7 @@ const ja: Translations = {
   "footer.line": "Marketplace App Status — 独立プロジェクト、Atlassian とは無関係です。",
   "footer.privacy": "プライバシー",
   "footer.terms": "利用規約",
+  "footer.feedback": "フィードバック",
 
   // Share
   "share.tooltip": "アプリリストを共有",
@@ -382,6 +384,7 @@ const de: Translations = {
   "footer.line": "Marketplace App Status — unabhängiges Projekt, nicht mit Atlassian verbunden.",
   "footer.privacy": "Datenschutz",
   "footer.terms": "Nutzungsbedingungen",
+  "footer.feedback": "Feedback",
 
   // Share
   "share.tooltip": "App-Liste teilen",
@@ -528,6 +531,7 @@ const ko: Translations = {
   "footer.line": "Marketplace App Status — 독립 프로젝트, Atlassian과 무관합니다.",
   "footer.privacy": "개인정보처리방침",
   "footer.terms": "이용약관",
+  "footer.feedback": "피드백",
 
   // Share
   "share.tooltip": "앱 목록 공유",
@@ -674,6 +678,7 @@ const fr: Translations = {
   "footer.line": "Marketplace App Status — projet indépendant, non affilié à Atlassian.",
   "footer.privacy": "Confidentialité",
   "footer.terms": "Conditions",
+  "footer.feedback": "Retour",
 
   // Share
   "share.tooltip": "Partager la liste d'apps",

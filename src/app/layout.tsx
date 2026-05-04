@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SiteFooter } from "@/components/site-footer";
 import { LocaleProvider } from "@/lib/i18n/use-translation";
@@ -85,6 +87,8 @@ export default function RootLayout({
             <SiteFooter />
           </TooltipProvider>
         </LocaleProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
