@@ -1,6 +1,6 @@
-# Atlassian Marketplace Status
+# Atlassian App Status
 
-Real-time service health dashboard for Jira & Confluence third-party apps — no login, no API token required.
+Real-time service health dashboard for Jira & Confluence third-party apps — no login, no database, no API token required.
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.2-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
@@ -13,7 +13,7 @@ Real-time service health dashboard for Jira & Confluence third-party apps — no
 
 Atlassian's own Jira instance has a status page, but the hundreds of third-party Marketplace apps that teams rely on — ScriptRunner, Tempo, Zephyr, draw.io, and many more — each publish their health on separate, vendor-hosted status pages. During an incident, engineers waste minutes hunting for the right URL.
 
-This dashboard solves that: it aggregates live status from all your apps into one view, with heartbeat history, response times, and instant incident notifications — all without touching your Atlassian instance.
+This dashboard aggregates live status from all your apps into one view, with heartbeat history, response times, and instant incident notifications — all without touching your Atlassian instance.
 
 ---
 
@@ -21,18 +21,21 @@ This dashboard solves that: it aggregates live status from all your apps into on
 
 | Feature | Description |
 |---|---|
-| **Quick Setup** | One-click import of 21 popular apps grouped by category. Status URLs auto-detected per vendor. |
+| **Quick Setup** | One-click import of popular apps grouped by category. Status URLs auto-detected per vendor. |
 | **Marketplace Search** | Search any app by name. Status URL resolved server-side from a curated vendor map. |
+| **Share via Link** | Generate a URL that encodes your app list. Recipients can import with one click — no server, no account needed. The payload is Base64URL-encoded in the `#share=` hash (never sent to the server). |
 | **Auto-discovery** | For vendors not in the static map, probes common patterns (`status.vendor.com`, `vendor.statuspage.io`, etc.) in parallel with page-name validation to prevent false positives. |
-| **Self-healing URLs** | When a vendor moves their status page, the dashboard detects DNS failure, auto-discovers the new URL, retries the check, and silently persists the replacement — no manual fix needed. |
+| **Self-healing URLs** | When a vendor moves their status page, the dashboard detects the DNS failure, auto-discovers the new URL, retries the check, and silently persists the replacement. |
 | **Live Health Checks** | Calls vendor status APIs from the Next.js server (avoids CORS). Supports Atlassian Statuspage, Instatus, and Hund.io formats. |
 | **Per-app Component Matching** | On unified vendor pages (e.g. Adaptavist hosts ScriptRunner, Bitbucket Connector, etc. on one page), fuzzy-matches the specific app's component to avoid false positives from other apps' outages. |
 | **Heartbeat History** | Last 30 pings shown as colour-coded bars. Uptime % calculated per app. |
+| **Result Caching** | Status results are persisted to localStorage and shown immediately on remount. Initial scan is skipped if the last check was less than 90 seconds ago — avoids redundant API calls on quick navigation. |
 | **Auto-refresh** | Health checks run automatically every 5 minutes. |
 | **Status Change Toasts** | Instant notifications when an app transitions between Operational / Degraded / Outage. |
+| **i18n** | UI available in 5 languages: English, 日本語, Deutsch, 한국어, Français. Locale persisted to localStorage. Privacy page includes jurisdiction-specific legal sections (GDPR, PIPA, APPI) per locale. |
 | **Export** | Download your app list as JSON. |
 | **Dark Mode** | Theme toggle with localStorage persistence and anti-flicker inline script. |
-| **No backend, no database** | All state stored in `localStorage`. Works as a static site deployed to Vercel or any Next.js host. |
+| **No database** | All user state stored in `localStorage`. Requires a Next.js host (Vercel) for the server-side API routes — no database or authentication infrastructure needed. |
 
 ---
 
@@ -42,7 +45,7 @@ This dashboard solves that: it aggregates live status from all your apps into on
 - **[React 19](https://react.dev/)** — `memo`, `useCallback`, concurrent features
 - **[TypeScript 5](https://www.typescriptlang.org/)** — strict mode throughout
 - **[Tailwind CSS v4](https://tailwindcss.com/)** — utility-first styling with dark mode support
-- **[base-ui](https://base-ui.com/)** — headless primitives (Tooltip, Dialog, etc.)
+- **[base-ui](https://base-ui.com/)** — headless primitives (Tooltip, Dialog, Popover)
 - **[shadcn/ui](https://ui.shadcn.com/)** — pre-built component shells (Table, Badge, Button)
 - **[Lucide React](https://lucide.dev/)** — icon set
 - **[cmdk](https://cmdk.paco.me/)** — command palette for app search
@@ -56,6 +59,8 @@ src/
 ├── app/
 │   ├── layout.tsx                  # Root layout — SEO metadata, anti-flicker dark mode script
 │   ├── page.tsx                    # Single-page entry point
+│   ├── privacy/page.tsx            # Privacy policy (locale-aware jurisdiction sections)
+│   ├── terms/page.tsx              # Terms of service
 │   └── api/
 │       ├── status/
 │       │   └── route.ts            # POST — health check engine (Statuspage, Instatus, Hund parsers, self-healing)
@@ -65,15 +70,24 @@ src/
 │           └── popular/
 │               └── route.ts        # GET — curated popular apps list with 1-hour in-memory cache
 ├── components/
-│   ├── status-dashboard.tsx        # Main dashboard — state management, table, toasts, dialogs
+│   ├── status-dashboard.tsx        # Main dashboard — state, table, toasts, share, dialogs
 │   ├── add-app-dialog.tsx          # Search-based single-app add flow
 │   ├── quick-setup-dialog.tsx      # Bulk-add popular apps with checkboxes by category
+│   ├── share-import-dialog.tsx     # Preview & confirm import from a share link
+│   ├── onboarding-dialog.tsx       # First-visit guide
 │   ├── app-logo.tsx                # Logo with fallback to first-letter initials
+│   ├── language-switcher.tsx       # Locale selector
 │   ├── theme-toggle.tsx            # Dark/light toggle
 │   └── ui/                         # shadcn/base-ui component shells
 ├── lib/
+│   ├── share.ts                    # Base64URL encode/decode for share link payload
 │   ├── status-discovery.ts         # Auto-discovery probe engine + vendor name normaliser
-│   └── utils.ts                    # cn() Tailwind class merger
+│   ├── url-guard.ts                # SSRF guard for outbound URLs
+│   ├── utils.ts                    # cn() Tailwind class merger
+│   └── i18n/
+│       ├── locales.ts              # Locale list and labels
+│       ├── translations.ts         # All UI strings for 5 locales
+│       └── use-translation.tsx     # useTranslation hook + LocaleProvider
 └── types/
     └── index.ts                    # Shared types + PRODUCT_RULES + VENDOR_STATUS_MAP
 ```
@@ -211,12 +225,28 @@ Only a non-zero score component is selected. If no component matches, the global
 
 ---
 
+## Share Link
+
+The share feature encodes your entire app list into a URL hash — no server storage involved.
+
+```
+https://your-domain/#share=eyJpIjoiY29tLm9ucmVzb2x2ZS5...
+```
+
+**Encoding:** each app is minimised to 5 fields (`i`/`n`/`v`/`u`/`t` + optional `l` for logo), JSON-serialised, UTF-8 percent-encoded, then Base64URL-encoded (URL-safe, no padding). The hash fragment is never sent to the server.
+
+**Importing:** on load, if a `#share=` hash is detected, a preview dialog lists the incoming apps. The user can confirm or cancel. Apps already in the dashboard (matched by Marketplace ID or app name) are excluded from the import to avoid duplicates. Imported apps trigger an immediate status check.
+
+**Quick Setup compatibility:** Marketplace app IDs are preserved in the share payload, so apps imported via share link are correctly detected as "already added" in the Quick Setup dialog.
+
+---
+
 ## Data Model
 
 All state lives in `localStorage` — no database or authentication required.
 
 ```ts
-// localStorage key: "jira-marketplace-apps"
+// "jira-marketplace-apps"
 RegisteredApp {
   id: string           // Marketplace addon key (e.g. "com.mxgraph.jira.drawio")
   appName: string
@@ -226,8 +256,14 @@ RegisteredApp {
   logoUrl?: string     // CDN URL from Marketplace
 }
 
-// localStorage key: "jira-marketplace-history"
+// "jira-marketplace-history"
 Record<appId, PingRecord[]>  // Up to last 30 pings per app
+
+// "jira-marketplace-latest"
+Record<appId, HealthCheckResult>  // Most recent check result per app (shown on remount before next scan)
+
+// "jira-marketplace-last-checked"
+string  // ISO 8601 timestamp of the last full scan (used for 90 s remount cooldown)
 
 PingRecord {
   status: "operational" | "degraded" | "outage"
@@ -269,7 +305,7 @@ Run health checks for a batch of apps.
     {
       "appId": "com.onresolve.jira.groovy.groovyrunner",
       "status": "operational",
-      "checkedAt": "2026-05-03T09:00:00.000Z",
+      "checkedAt": "2026-05-04T09:00:00.000Z",
       "responseTimeMs": 312,
       "message": "ScriptRunner for Jira: operational"
     }
@@ -277,12 +313,10 @@ Run health checks for a batch of apps.
 }
 ```
 
-When a vendor's status page URL has changed and self-healing kicks in, the result also includes:
+When self-healing kicks in, the result also includes:
 
 ```json
 {
-  "appId": "...",
-  "status": "operational",
   "updatedStatusUrl": "https://new.vendor-status.com/api/v2/summary.json",
   "updatedCheckType": "statuspage_api"
 }
@@ -290,15 +324,19 @@ When a vendor's status page URL has changed and self-healing kicks in, the resul
 
 The client persists the new URL to localStorage automatically.
 
+**Rate limit:** 600 apps per IP per 60-second window (in-memory, resets per serverless instance).
+
 ### `GET /api/marketplace/search?query={text}&limit={n}`
 
 Proxy to the Atlassian Marketplace REST API v2. Returns apps enriched with resolved status URLs. Runs auto-discovery for vendors not in the static map (capped at 12 unique vendors per query). Blacklisted vendors are excluded from discovery.
+
+Results are cached in-memory for 60 seconds (keyed by `query:limit`).
 
 > The Marketplace API uses `text=` (not `q=`) for full-text search. This proxy handles the parameter correctly and re-ranks results by text similarity before returning.
 
 ### `GET /api/marketplace/popular`
 
-Returns a curated list of popular Jira apps grouped by category, with logos and status URLs resolved. Results are cached in-memory for 1 hour to avoid hammering the Marketplace API.
+Returns a curated list of popular Jira apps grouped by category, with logos and status URLs resolved. Results are cached in-memory for 1 hour.
 
 **Categories:** Automation · Time Tracking · Testing & QA · Diagrams · Reporting · Planning · Dev Tools · Integrations · Utilities
 
@@ -306,7 +344,7 @@ Returns a curated list of popular Jira apps grouped by category, with logos and 
 
 ## Supported Vendors
 
-The following vendors are covered by the static map (`VENDOR_STATUS_MAP`) and will always resolve without auto-discovery:
+The following vendors are covered by the static map and will always resolve without auto-discovery:
 
 | Vendor | Status Page |
 |---|---|
@@ -314,7 +352,7 @@ The following vendors are covered by the static map (`VENDOR_STATUS_MAP`) and wi
 | Appfire (+ SoftwarePlant, Bob Swift, Comalatech, …) | appfire-apps.statuspage.io |
 | Tempo Software (+ ALM Works, Old Street, Roadmunk, …) | status.tempo.io |
 | Adaptavist (+ OnResolve, Brikit, Meetical) | status.connect.adaptavist.com |
-| SmartBear (+ Zephyr family, BitBar, Cucumber) | zephyr.status.smartbear.com |
+| SmartBear (Zephyr family, BitBar, Cucumber) | per-product subdomains |
 | GitKraken (+ Axosoft) | gij.gitkrakenstatus.com |
 | Exalate (+ iDalko, iGo Software) | status.exalate.com |
 | JGraph (draw.io) | status.draw.io |
@@ -324,12 +362,12 @@ The following vendors are covered by the static map (`VENDOR_STATUS_MAP`) and wi
 | Miro | status.miro.com |
 | EazyBI | status.eazybi.com |
 | OBoard | oboard.instatus.com |
-| Xblend / Xpand IT (Xray) | xray.statuspage.io |
+| Xblend / Xpand IT (Xray, Xporter) | per-product |
 | Tricentis | status.tricentis.com |
 | Resolution | status.resolution.de |
 | HeroCoders | status.herocoders.com |
 | Move Work Forward | status.moveworkforward.com |
-| Elements (formerly Valiantys nFeed) | status.elements-apps.com |
+| Elements | status.elements-apps.com |
 | Deviniti | deviniti.statuspage.io |
 | Refined | status.refined.com |
 | Deiser | status.deiser.com |
@@ -340,10 +378,13 @@ The following vendors are covered by the static map (`VENDOR_STATUS_MAP`) and wi
 | Twinit | twinit.statuspage.io |
 | SolDevelo | soldevelo.statuspage.io |
 | Bloompeak | bloompeak.statuspage.io |
+| Codefortynine | status.codefortynine.com |
+| SaaSJet | status.saasjet.com |
+| TeamLead | teamlead.statuspage.io |
+| MindPro | mindpro.statuspage.io |
+| Cypress.io | cypress.statuspage.io |
 
-Product-specific rules in `PRODUCT_RULES` also cover individual products within these vendors that operate separate status pages (e.g. Zephyr Essential, Zephyr Enterprise, Zephyr Squad each have their own SmartBear subdomains).
-
-Vendors confirmed to have no public status page (`VENDOR_BLACKLIST`): `k15t`, `midori`, `reliex`, `ease solutions`, `open source consulting`, `decadis`.
+Vendors confirmed to have no public status page (`VENDOR_BLACKLIST`): `k15t`, `midori`, `reliex`, `ease solutions`, `open source consulting`, `decadis`, `meta-inf`.
 
 ---
 
@@ -379,6 +420,12 @@ npm start
 
 No environment variables required. The app uses only public APIs (Atlassian Marketplace REST API v2 and vendor status pages).
 
+### Deployment
+
+The app requires a Next.js-compatible host for its server-side API routes. **Vercel** is the recommended platform — no configuration needed beyond connecting the repository.
+
+Pure static hosts (GitHub Pages, Cloudflare Pages without Workers) are not supported because `/api/status` and `/api/marketplace/*` are server-side route handlers.
+
 ---
 
 ## Extending the App
@@ -413,11 +460,9 @@ If the product name keywords are generic English words that could appear in unre
 { keywords: ["your product", "jira"], vendor: "yourvendor", url: "https://..." },
 ```
 
-Rules are matched by substring against the app name (case-insensitive). More specific rules must appear before broader ones.
-
 ### Marking a vendor as having no status page
 
-Add to `VENDOR_BLACKLIST` in `src/types/index.ts` to suppress auto-discovery and skip status checks for that vendor's apps:
+Add to `VENDOR_BLACKLIST` in `src/types/index.ts` to suppress auto-discovery for that vendor's apps:
 
 ```ts
 export const VENDOR_BLACKLIST = new Set([
@@ -435,19 +480,27 @@ Edit the `CURATED` array in `src/app/api/marketplace/popular/route.ts`:
 
 - `query` — passed as-is to the Marketplace search API
 - `vendorHint` — substring matched against the vendor name to pick the correct result when multiple apps share similar names
-- `category` — must be one of: `Automation` · `Time Tracking` · `Testing & QA` · `Diagrams` · `Reporting` · `Planning` · `Dev Tools` · `Integrations` · `Utilities`
+- `category` — one of: `Automation` · `Time Tracking` · `Testing & QA` · `Diagrams` · `Reporting` · `Planning` · `Dev Tools` · `Integrations` · `Utilities`
+
+### Adding a new locale
+
+1. Add the locale code to `src/lib/i18n/locales.ts`
+2. Add a full translation object to `src/lib/i18n/translations.ts`
+3. If the locale has specific legal requirements (GDPR, PIPA, etc.), add `privacy.jurisdictionHeading` and `privacy.jurisdictionBody` keys and add the locale to the `hasJurisdictionSection` list in `src/app/privacy/page.tsx`
 
 ---
 
 ## Architecture Decisions
 
-**Why no database?** The target user is a single Jira administrator or developer who wants a personal dashboard. `localStorage` is simpler, faster, and requires zero infrastructure. The app works offline after first load.
+**Why no database?** The target user is a single Jira administrator or developer who wants a personal dashboard. `localStorage` is simpler, faster, and requires zero infrastructure. All data stays on the user's device.
 
 **Why a Next.js server proxy for status checks?** Vendor status pages block direct browser requests via CORS. Running the fetch from the Next.js server avoids this entirely. The proxy also normalises response formats so the client never has to handle Statuspage vs. Instatus differences.
 
 **Why a static vendor map instead of scraping?** Status page URLs rarely change. A curated map gives deterministic, tested results. Auto-discovery fills the gap for the long tail of vendors not yet in the map.
 
 **Why `summary.json` over `status.json`?** The Atlassian Statuspage `summary.json` endpoint includes the full component list, which is required for per-app component matching on unified vendor pages. `status.json` only returns the global indicator. The health check route upgrades any legacy `status.json` URLs transparently.
+
+**Why `#share=` hash for sharing?** The hash fragment is not sent to the server — the app list stays entirely client-side even when sharing. No file upload, no database write, no expiry. The trade-off is a longer URL, but for 10–30 apps the Base64URL payload is under 2 KB.
 
 **Why not import from Jira directly?** Jira's UPM REST API only returns apps installed via the traditional P2 (server/DC) plugin system. Forge apps (the modern cloud platform) — which includes ScriptRunner Cloud and many newer apps — are invisible to UPM. Since this would silently miss a large fraction of cloud-hosted apps, the import flow was replaced with the Quick Setup curated list and Marketplace search, both of which use the public Marketplace API.
 
