@@ -8,7 +8,7 @@ Real-time service health dashboard for Jira & Confluence third-party apps — no
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**[Live Demo](https://marketplace-app-status.vercel.app)** · [Report an Issue](https://github.com/happy-yeachan/Marketplace-App-Status/issues) · [한국어](./README.ko.md)
+**[Live Demo](https://marketplace.yeachan.cloud)** · [Report an Issue](https://github.com/happy-yeachan/Marketplace-App-Status/issues) · [한국어](./README.ko.md)
 
 ---
 
@@ -236,7 +236,7 @@ Only a non-zero score component is selected. If no component matches, the global
 The share feature encodes your entire app list into a URL hash — no server storage involved.
 
 ```
-https://marketplace-app-status.vercel.app/#share=eyJpIjoiY29tLm9ucmVzb2x2ZS5...
+https://marketplace.yeachan.cloud/#share=eyJpIjoiY29tLm9ucmVzb2x2ZS5...
 ```
 
 **Encoding:** each app is minimised to 5 fields (`i`/`n`/`v`/`u`/`t` + optional `l` for logo), JSON-serialised, UTF-8 percent-encoded, then Base64URL-encoded (URL-safe, no padding). The hash fragment is never sent to the server.
