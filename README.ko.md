@@ -339,8 +339,8 @@ Atlassian Marketplace REST API v2 프록시. 정적 맵에 없는 벤더는 자�
 ### 설치
 
 ```bash
-git clone https://github.com/happy-yeachan/SaaS-Jira-Apps-Status.git
-cd SaaS-Jira-Apps-Status
+git clone https://github.com/happy-yeachan/Marketplace-App-Status.git
+cd Marketplace-App-Status
 npm install
 ```
 

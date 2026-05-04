@@ -21,6 +21,7 @@ const REQUEST_TIMEOUT_MS = 8000;
 // a fan-out fetch tool against vendor status pages.
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_APPS = 600;     // total apps checked per IP per window
+const RATE_LIMIT_MAX_ENTRIES = 500;  // evict expired entries beyond this size
 const rateLimit = new Map<string, { resetAt: number; appCount: number }>();
 
 function clientIp(request: Request): string {
@@ -33,6 +34,13 @@ function consumeRateBudget(ip: string, appCount: number): boolean {
   const now = Date.now();
   const entry = rateLimit.get(ip);
   if (!entry || entry.resetAt <= now) {
+    // Evict all expired entries when the map grows too large to prevent
+    // unbounded memory growth from unique IPs that never revisit.
+    if (rateLimit.size >= RATE_LIMIT_MAX_ENTRIES) {
+      for (const [k, v] of rateLimit) {
+        if (v.resetAt <= now) rateLimit.delete(k);
+      }
+    }
     rateLimit.set(ip, { resetAt: now + RATE_LIMIT_WINDOW_MS, appCount });
     return appCount <= RATE_LIMIT_MAX_APPS;
   }
@@ -91,7 +99,8 @@ function normalizeComponentStatus(raw: string): AppHealthStatus {
     case "degraded":
     case "undermaintenance":
       return "degraded";
-    case "partialoutage": // classified as outage per product requirement
+    case "partialoutage":
+      return "degraded";
     case "majoroutage":
     case "outage":
     case "down":
@@ -108,6 +117,7 @@ interface StatuspageComponent {
   name?: string;
   status?: string;
   group?: boolean;
+  group_id?: string;
 }
 
 interface StatuspageSummary {
@@ -286,11 +296,26 @@ function extractStatuspageStatus(
   const globalStatus  = globalFromStatuspageIndicator(payload.status?.indicator);
   const globalMessage = payload.status?.description ?? "Statuspage API response";
 
+  // Build group-id → group-name map so leaf components can inherit their
+  // parent group name for scoring. e.g. "Synchronisation node" in the
+  // "Jira Cloud" group becomes "Jira Cloud Synchronisation node", which lets
+  // the platform scorer award a hasPlatform bonus for Jira apps.
+  const groupNameById = new Map<string, string>();
+  for (const c of payload.components ?? []) {
+    if (c.group && c.id && c.name) groupNameById.set(c.id, c.name);
+  }
+
   const components = (payload.components ?? [])
     .filter((c): c is StatuspageComponent & { name: string } =>
       Boolean(c.name) && !c.group,
     )
-    .map((c) => ({ name: c.name, rawStatus: c.status ?? "" }));
+    .map((c) => {
+      const groupName = c.group_id ? groupNameById.get(c.group_id) : undefined;
+      return {
+        name: groupName ? `${groupName} ${c.name}` : c.name,
+        rawStatus: c.status ?? "",
+      };
+    });
 
   const fuzzy = findFuzzyNameComponent(appName, components);
   if (fuzzy?.rawStatus) {
@@ -320,6 +345,14 @@ function extractInstatusStatus(
   const components = (payload.components ?? [])
     .filter((c): c is InstatusComponent & { name: string } => Boolean(c.name))
     .map((c) => ({ name: c.name, rawStatus: c.status ?? "" }));
+
+  const fuzzy = findFuzzyNameComponent(appName, components);
+  if (fuzzy?.rawStatus) {
+    return {
+      status:  normalizeComponentStatus(fuzzy.rawStatus),
+      message: `${fuzzy.name}: ${fuzzy.rawStatus}`,
+    };
+  }
 
   const best = findBestComponent(appName, components);
   if (best?.rawStatus) {
@@ -620,10 +653,24 @@ async function checkAppHealth(app: RegisteredApp): Promise<HealthCheckResult> {
       }
     }
 
+    // AbortError = fetch timed out — the service may be fine; report degraded,
+    // not outage, so a cold-start probe doesn't flash a false red status.
+    const isTimeout = error instanceof Error && error.name === "AbortError";
+    if (isTimeout) {
+      console.warn(`[TIMEOUT] "${app.appName}" — status check timed out`);
+      return {
+        appId:          app.id,
+        status:         "degraded" as const,
+        checkedAt:      new Date().toISOString(),
+        responseTimeMs: Date.now() - start,
+        message:        "Status check timed out",
+      };
+    }
+
     console.error(`[CRITICAL ERROR] "${app.appName}" | ${msg}`);
     return {
       appId:          app.id,
-      status:         "outage",
+      status:         "outage" as const,
       checkedAt:      new Date().toISOString(),
       responseTimeMs: Date.now() - start,
       message:        msg,

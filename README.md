@@ -398,8 +398,8 @@ Vendors confirmed to have no public status page (`VENDOR_BLACKLIST`): `k15t`, `m
 ### Installation
 
 ```bash
-git clone https://github.com/happy-yeachan/SaaS-Jira-Apps-Status.git
-cd SaaS-Jira-Apps-Status
+git clone https://github.com/happy-yeachan/Marketplace-App-Status.git
+cd Marketplace-App-Status
 npm install
 ```
 

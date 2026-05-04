@@ -477,6 +477,7 @@ export function StatusDashboard() {
   const [latestById, setLatestById] = useState<Record<string, HealthCheckResult>>({});
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const [isChecking, setIsChecking] = useState(false);
+  const isCheckingRef = useRef(false);
   const [sortKey, setSortKey] = useState<SortKey>("status");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -665,9 +666,11 @@ export function StatusDashboard() {
   useEffect(() => { applyResultsRef.current = applyResults; }, [applyResults]);
 
   const checkAllStatuses = async () => {
+    if (isCheckingRef.current) return;
     const appsList = appsRef.current;
     const checkableApps = appsList.filter((a) => a.statusUrl);
     if (checkableApps.length === 0) return;
+    isCheckingRef.current = true;
     setIsChecking(true);
     try {
       const res = await fetch("/api/status", {
@@ -699,6 +702,7 @@ export function StatusDashboard() {
         return next;
       });
     } finally {
+      isCheckingRef.current = false;
       setIsChecking(false);
     }
   };
@@ -766,7 +770,7 @@ export function StatusDashboard() {
     if (!app.statusUrl) return;
     setAddingIds((prev) => new Set([...prev, app.id]));
 
-    const singleCheck = () =>
+    const doCheck = () =>
       fetch("/api/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -775,25 +779,25 @@ export function StatusDashboard() {
         .then((r) => (r.ok ? (r.json() as Promise<HealthCheckResponse>) : null))
         .catch(() => null);
 
-    void (async () => {
-      try {
-        const data = await singleCheck();
+    void doCheck()
+      .then((data) => {
         const result = data?.results?.[0];
-        if (result?.status === "outage") {
-          // First check may be a cold-start false positive — retry once after a
-          // short delay before committing the outage state. The spinner stays
-          // visible during the retry window.
-          await new Promise<void>((res) => setTimeout(res, 3000));
-          const retryData = await singleCheck();
-          const finalResults = retryData?.results ?? data?.results;
-          if (finalResults?.[0]) applyResults(finalResults, latestByIdRef.current);
-        } else if (data?.results?.[0]) {
-          applyResults(data.results, latestByIdRef.current);
+        if (result) {
+          applyResults(data!.results, latestByIdRef.current);
+          // Cold-start may produce a false outage/degraded — silently recheck
+          // after 10 s without showing a spinner.
+          if (result.status === "outage" || result.status === "degraded") {
+            setTimeout(() => {
+              void doCheck().then((retryData) => {
+                if (retryData?.results?.[0]) applyResults(retryData.results, latestByIdRef.current);
+              });
+            }, 10_000);
+          }
         }
-      } finally {
+      })
+      .finally(() => {
         setAddingIds((prev) => { const n = new Set(prev); n.delete(app.id); return n; });
-      }
-    })();
+      });
   };
 
   const handleBulkAddApps = (newApps: RegisteredApp[]) => {

@@ -141,7 +141,7 @@ Atlassian, Appfire, Tempo Software, Adaptavist, SmartBear (Zephyr 제품군), Gi
 
 ```bash
 # 저장소 클론
-git clone https://github.com/happy-yeachan/SaaS-Jira-Apps-Status.git
+git clone https://github.com/happy-yeachan/Marketplace-App-Status.git
 
 # 의존성 설치
 npm install
@@ -159,7 +159,7 @@ npm run build && npm start
 
 ## 8. 저장소
 
-**GitHub:** https://github.com/happy-yeachan/SaaS-Jira-Apps-Status
+**GitHub:** https://github.com/happy-yeachan/Marketplace-App-Status
 
 ---
 

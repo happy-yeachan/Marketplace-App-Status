@@ -181,11 +181,14 @@ export function AddAppDialog({
 
   const liveIsLong = query.trim().length >= 2;
   const debouncedIsLong = debouncedQuery.trim().length >= 2;
+  const hasStaleResults = results.length > 0;
 
   const showHint = !liveIsLong;
-  const showSkeleton = liveIsLong && (isSearching || !debouncedIsLong || !hasSearched);
+  // Show skeleton only when there are no stale results to fall back on
+  const showSkeleton = liveIsLong && (isSearching || !debouncedIsLong || !hasSearched) && !hasStaleResults;
   const showEmpty = debouncedIsLong && !isSearching && hasSearched && results.length === 0;
-  const showResults = debouncedIsLong && !isSearching && results.length > 0;
+  // Stale-while-revalidate: keep previous results visible while a new search is in flight
+  const showResults = hasStaleResults && liveIsLong;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -309,8 +312,9 @@ export function AddAppDialog({
                   </p>
                 )}
 
-                {showResults &&
-                  results.map((item) => {
+                {showResults && (
+                  <div className={isSearching ? "opacity-50 transition-opacity duration-150" : undefined}>
+                  {results.map((item) => {
                     const isAlreadyAdded = existingIds.has(item.id);
                     const isSupported = item.statusUrl !== "";
 
@@ -369,6 +373,8 @@ export function AddAppDialog({
                       </CommandItem>
                     );
                   })}
+                  </div>
+                )}
               </CommandList>
             </Command>
 

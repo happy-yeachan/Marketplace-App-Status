@@ -29,6 +29,8 @@ import { NextResponse } from "next/server";
 import { resolveStatusUrl, VENDOR_BLACKLIST, type MarketplaceSearchItem } from "@/types";
 import { discoverStatusUrl, normalizeVendorName } from "@/lib/status-discovery";
 
+export const runtime = "edge";
+
 const MARKETPLACE_BASE = "https://marketplace.atlassian.com";
 
 // ── In-memory search cache ────────────────────────────────────────────────────
@@ -229,12 +231,12 @@ export async function GET(request: Request) {
     const payload = (await res.json()) as unknown;
     const rawItems = sortByTextRelevance(parseAddons(payload), text);
 
-    // Race discovery against a 1.5 s budget. Static-map apps are already fully
+    // Race discovery against an 800 ms budget. Static-map apps are already fully
     // enriched; discovery only adds bonus coverage for unknown vendors.
     // Clear the fallback timer if discovery wins to avoid timer accumulation.
     let fallbackTimer!: ReturnType<typeof setTimeout>;
     const fallback = new Promise<MarketplaceSearchItem[]>((resolve) => {
-      fallbackTimer = setTimeout(() => resolve(rawItems), 1500);
+      fallbackTimer = setTimeout(() => resolve(rawItems), 800);
     });
     const items = await Promise.race([
       enrichWithDiscovery(rawItems).finally(() => clearTimeout(fallbackTimer)),
