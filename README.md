@@ -1,4 +1,4 @@
-# Atlassian App Status
+# Marketplace App Status
 
 Real-time service health dashboard for Jira & Confluence third-party apps — no login, no database, no API token required.
 
@@ -6,14 +6,17 @@ Real-time service health dashboard for Jira & Confluence third-party apps — no
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+**[Live Demo](https://marketplace-app-status.vercel.app)** · [Report an Issue](https://github.com/happy-yeachan/Marketplace-App-Status/issues) · [한국어](./README.ko.md)
 
 ---
 
 ## Overview
 
-Atlassian's own Jira instance has a status page, but the hundreds of third-party Marketplace apps that teams rely on — ScriptRunner, Tempo, Zephyr, draw.io, and many more — each publish their health on separate, vendor-hosted status pages. During an incident, engineers waste minutes hunting for the right URL.
+Atlassian's own services have a status page, but the hundreds of third-party Marketplace apps that teams rely on every day — ScriptRunner, Tempo, Zephyr, draw.io, and many more — each publish their health on separate, vendor-hosted status pages. During an incident, engineers waste minutes hunting for the right URL.
 
-This dashboard aggregates live status from all your apps into one view, with heartbeat history, response times, and instant incident notifications — all without touching your Atlassian instance.
+**Marketplace App Status** aggregates live health from all your apps into one view, with heartbeat history, response times, and instant incident notifications — all without touching your Atlassian instance.
 
 ---
 
@@ -49,6 +52,7 @@ This dashboard aggregates live status from all your apps into one view, with hea
 - **[shadcn/ui](https://ui.shadcn.com/)** — pre-built component shells (Table, Badge, Button)
 - **[Lucide React](https://lucide.dev/)** — icon set
 - **[cmdk](https://cmdk.paco.me/)** — command palette for app search
+- **[Vercel Analytics](https://vercel.com/analytics)** + **[Speed Insights](https://vercel.com/docs/speed-insights)** — privacy-first usage and Core Web Vitals monitoring
 
 ---
 
@@ -66,7 +70,7 @@ src/
 │       │   └── route.ts            # POST — health check engine (Statuspage, Instatus, Hund parsers, self-healing)
 │       └── marketplace/
 │           ├── search/
-│           │   └── route.ts        # GET — Atlassian Marketplace search proxy + auto-discovery
+│           │   └── route.ts        # GET — Atlassian Marketplace search proxy + auto-discovery (Edge Runtime)
 │           └── popular/
 │               └── route.ts        # GET — curated popular apps list with 1-hour in-memory cache
 ├── components/
@@ -157,7 +161,7 @@ Each probe goes through two validation layers before being accepted:
 
 Slugs that are too short (< 5 chars) or match a 50+ word blocklist of common English words (`open`, `smart`, `flow`, `work`, `release`, etc.) are skipped entirely.
 
-All probes use `AbortSignal.timeout(2000)` to fail fast. `Promise.any()` returns the first successful hit. Runs during Marketplace search (capped at 12 unique vendors per query, bounding added latency to ~2 s).
+All probes use `AbortSignal.timeout(2000)` to fail fast. `Promise.any()` returns the first successful hit. Runs during Marketplace search (capped at 12 unique vendors per query, bounding added latency to ~800 ms).
 
 ### Step 4 — Self-healing (runtime URL recovery)
 
@@ -207,8 +211,10 @@ The pipeline uses multiple independent layers to ensure status data is always me
 | Raw status | Our status |
 |---|---|
 | `operational`, `none` indicator, `UP` | ✅ Operational |
-| `degraded_performance`, `minor` indicator, `UNDERMAINTENANCE` | ⚠️ Degraded |
-| `partial_outage`, `major_outage`, `critical`, `PARTIALOUTAGE`, `MAJOROUTAGE` | 🔴 Outage |
+| `degraded_performance`, `partial_outage`, `minor` indicator, `UNDERMAINTENANCE` | ⚠️ Degraded |
+| `major_outage`, `critical`, `MAJOROUTAGE` | 🔴 Outage |
+
+`partial_outage` maps to **Degraded** (not Outage) — a partial outage means some nodes are affected, not the entire service.
 
 ### Per-app component matching on unified pages
 
@@ -217,7 +223,7 @@ Many vendors host all their products on one status page (e.g. Adaptavist hosts S
 The health check engine runs a two-pass match against the component list:
 
 1. **Fuzzy name match** — strips "for Jira/Confluence" suffixes and normalises punctuation, then checks for substring inclusion both ways.
-2. **Token score match** — tokenises the app name (excluding stop words and platform words like "jira"), scores each component by keyword and platform overlap.
+2. **Token score match** — tokenises the app name (excluding stop words and platform words like "jira"), scores each component by keyword and platform overlap. Leaf components inherit their parent group name for scoring — e.g. a component called "Synchronisation node" inside the "Jira Cloud" group scores as "Jira Cloud Synchronisation node", giving it a platform bonus for Jira apps.
 
 Platform words (`jira`, `confluence`) are excluded from the main token set and scored separately. A component that only shares a platform word with the app name scores 0 — this prevents every `"* for Jira"` entry on a unified page from being treated as a match.
 
@@ -230,7 +236,7 @@ Only a non-zero score component is selected. If no component matches, the global
 The share feature encodes your entire app list into a URL hash — no server storage involved.
 
 ```
-https://your-domain/#share=eyJpIjoiY29tLm9ucmVzb2x2ZS5...
+https://marketplace-app-status.vercel.app/#share=eyJpIjoiY29tLm9ucmVzb2x2ZS5...
 ```
 
 **Encoding:** each app is minimised to 5 fields (`i`/`n`/`v`/`u`/`t` + optional `l` for logo), JSON-serialised, UTF-8 percent-encoded, then Base64URL-encoded (URL-safe, no padding). The hash fragment is never sent to the server.
@@ -328,7 +334,7 @@ The client persists the new URL to localStorage automatically.
 
 ### `GET /api/marketplace/search?query={text}&limit={n}`
 
-Proxy to the Atlassian Marketplace REST API v2. Returns apps enriched with resolved status URLs. Runs auto-discovery for vendors not in the static map (capped at 12 unique vendors per query). Blacklisted vendors are excluded from discovery.
+Proxy to the Atlassian Marketplace REST API v2. Runs on **Edge Runtime** for near-zero cold-start latency. Returns apps enriched with resolved status URLs. Runs auto-discovery for vendors not in the static map (capped at 12 unique vendors per query, 800 ms budget). Blacklisted vendors are excluded from discovery.
 
 Results are cached in-memory for 60 seconds (keyed by `query:limit`).
 
@@ -422,9 +428,15 @@ No environment variables required. The app uses only public APIs (Atlassian Mark
 
 ### Deployment
 
-The app requires a Next.js-compatible host for its server-side API routes. **Vercel** is the recommended platform — no configuration needed beyond connecting the repository.
+The app requires a Next.js-compatible host for its server-side API routes. **Vercel** is the recommended platform — connect the repository and deploy with zero configuration.
 
 Pure static hosts (GitHub Pages, Cloudflare Pages without Workers) are not supported because `/api/status` and `/api/marketplace/*` are server-side route handlers.
+
+**Environment variables (optional):**
+
+| Variable | Default | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | `https://marketplace-app-status.vercel.app` | Used for canonical URL, OG tags, sitemap |
 
 ---
 
@@ -505,6 +517,17 @@ Edit the `CURATED` array in `src/app/api/marketplace/popular/route.ts`:
 **Why not import from Jira directly?** Jira's UPM REST API only returns apps installed via the traditional P2 (server/DC) plugin system. Forge apps (the modern cloud platform) — which includes ScriptRunner Cloud and many newer apps — are invisible to UPM. Since this would silently miss a large fraction of cloud-hosted apps, the import flow was replaced with the Quick Setup curated list and Marketplace search, both of which use the public Marketplace API.
 
 **Why self-healing instead of just reporting a URL error?** Reliability is the core promise of this dashboard. If the stored URL is stale (DNS failure) and the app simply reports "outage", that's a false alarm — worse than useless during an actual incident. Self-healing distinguishes network-level failures (stale URL) from HTTP-level failures (real outage) and recovers automatically, so the health signal stays trustworthy.
+
+---
+
+## Contributing & Feedback
+
+Found a vendor with a wrong or missing status page? Want to suggest a new feature?
+
+- **[Open an issue](https://github.com/happy-yeachan/Marketplace-App-Status/issues)** — bug reports, vendor mapping corrections, feature requests
+- **Pull requests welcome** — especially for adding vendors to `VENDOR_STATUS_MAP` or `PRODUCT_RULES`
+
+This project is not affiliated with Atlassian.
 
 ---
 
