@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Atlassian App Status — Real-time Jira & Confluence App Health";
+export const alt = "Marketplace App Status — Real-time Jira & Confluence App Health";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -46,7 +46,7 @@ export default function OpengraphImage() {
             />
           </div>
           <span style={{ fontSize: 32, fontWeight: 600, color: "#94a3b8" }}>
-            Atlassian App Status
+            Marketplace App Status
           </span>
         </div>
 

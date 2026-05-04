@@ -16,11 +16,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://atlassian-app-status.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://marketplace-app-status.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "Atlassian App Status — Real-time Jira & Confluence App Health",
+  title: "Marketplace App Status — Real-time Jira & Confluence App Health",
   description:
     "Monitor the live service health of your Atlassian Marketplace apps — ScriptRunner, Tempo, draw.io, Zephyr and hundreds more. One dashboard, no login required.",
   keywords: [
@@ -43,17 +43,17 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
   },
   openGraph: {
-    title: "Atlassian App Status",
+    title: "Marketplace App Status",
     description:
       "Real-time service health for Jira & Confluence marketplace apps. One dashboard for all your installed apps.",
     type: "website",
     locale: "en_US",
     url: SITE_URL,
-    siteName: "Atlassian App Status",
+    siteName: "Marketplace App Status",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Atlassian App Status",
+    title: "Marketplace App Status",
     description: "Real-time service health for Jira & Confluence marketplace apps.",
   },
 };
