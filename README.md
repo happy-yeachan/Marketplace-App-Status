@@ -8,7 +8,7 @@ Real-time service health dashboard for Jira & Confluence third-party apps — no
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**[Live Demo](https://marketplace.yeachan.cloud)** · [Report an Issue](https://github.com/happy-yeachan/Marketplace-App-Status/issues) · [한국어](./README.ko.md)
+**[Live Demo](https://marketplace.yeachan.cloud)** · [Report an Issue](https://github.com/happy-yeachan/Marketplace-App-Status/issues) · [Sponsor](https://github.com/sponsors/happy-yeachan) · [한국어](./README.ko.md)
 
 ---
 

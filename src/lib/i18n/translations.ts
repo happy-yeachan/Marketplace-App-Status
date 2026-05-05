@@ -93,6 +93,7 @@ const en: Translations = {
   "footer.privacy": "Privacy",
   "footer.terms": "Terms",
   "footer.feedback": "Feedback",
+  "footer.sponsor": "Sponsor",
 
   // Share
   "share.tooltip": "Share app list",
@@ -238,6 +239,7 @@ const ja: Translations = {
   "footer.privacy": "プライバシー",
   "footer.terms": "利用規約",
   "footer.feedback": "フィードバック",
+  "footer.sponsor": "スポンサー",
 
   // Share
   "share.tooltip": "アプリリストを共有",
@@ -385,6 +387,7 @@ const de: Translations = {
   "footer.privacy": "Datenschutz",
   "footer.terms": "Nutzungsbedingungen",
   "footer.feedback": "Feedback",
+  "footer.sponsor": "Sponsoren",
 
   // Share
   "share.tooltip": "App-Liste teilen",
@@ -532,6 +535,7 @@ const ko: Translations = {
   "footer.privacy": "개인정보처리방침",
   "footer.terms": "이용약관",
   "footer.feedback": "피드백",
+  "footer.sponsor": "후원",
 
   // Share
   "share.tooltip": "앱 목록 공유",
@@ -679,6 +683,7 @@ const fr: Translations = {
   "footer.privacy": "Confidentialité",
   "footer.terms": "Conditions",
   "footer.feedback": "Retour",
+  "footer.sponsor": "Soutenir",
 
   // Share
   "share.tooltip": "Partager la liste d'apps",
