@@ -13,10 +13,15 @@ Real-time service health dashboard for Jira & Confluence third-party apps — no
 ---
 
 ## Overview
-
 Atlassian's own services have a status page, but the hundreds of third-party Marketplace apps that teams rely on every day — ScriptRunner, Tempo, Zephyr, draw.io, and many more — each publish their health on separate, vendor-hosted status pages. During an incident, engineers waste minutes hunting for the right URL.
 
-**Marketplace App Status** aggregates live health from all your apps into one view, with heartbeat history, response times, and instant incident notifications — all without touching your Atlassian instance.
+**Marketplace App Status** aggregates live health from all your apps into one clean dashboard, with heartbeat history, response times, and instant incident notifications — all without touching your Atlassian instance.
+
+<div align="center">
+  <img width="100%" alt="Marketplace App Status Dashboard" src="https://github.com/user-attachments/assets/c5c03736-ee9e-469b-ba1a-d933c67348a0" />
+  <p><strong>Real-time overview of all your Marketplace apps in one place</strong><br>
+  <em>Instantly spot Outage or Degraded apps by color and jump directly to the vendor's status page with one click</em></p>
+</div>
 
 ---
 
