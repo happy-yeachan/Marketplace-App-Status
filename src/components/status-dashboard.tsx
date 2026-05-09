@@ -573,10 +573,11 @@ export function StatusDashboard() {
   useEffect(() => {
     const payload = parseShareHash();
     if (!payload) return;
-    const decoded = decodeSharePayload(payload);
-    if (decoded && decoded.length > 0) setShareImportApps(decoded);
-    // Strip the hash so refreshing doesn't re-trigger the dialog
+    // Strip the hash immediately so refreshing doesn't re-trigger the dialog
     history.replaceState(null, "", window.location.pathname + window.location.search);
+    void decodeSharePayload(payload).then((decoded) => {
+      if (decoded && decoded.length > 0) setShareImportApps(decoded);
+    });
   }, []);
 
   const addNotice = useCallback((message: string) => {
@@ -586,8 +587,9 @@ export function StatusDashboard() {
   }, []);
 
   const handleShare = useCallback(() => {
-    const url = buildShareUrl(apps);
-    navigator.clipboard.writeText(url).then(() => addNotice(t("share.copied")));
+    void buildShareUrl(apps).then((url) =>
+      navigator.clipboard.writeText(url).then(() => addNotice(t("share.copied"))),
+    );
   }, [apps, t, addNotice]);
 
   const handleShareImport = useCallback((incoming: RegisteredApp[]) => {
