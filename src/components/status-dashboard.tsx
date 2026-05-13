@@ -1063,16 +1063,50 @@ export function StatusDashboard() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Refresh */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void checkAllStatuses()}
-            disabled={isChecking}
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", isChecking && "animate-spin")} />
-            <span className="hidden sm:inline">{t("header.refresh")}</span>
-          </Button>
+          {/* Refresh + interval split button */}
+          <div className="flex items-center divide-x rounded-md border">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-r-none border-0"
+              onClick={() => void checkAllStatuses()}
+              disabled={isChecking}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", isChecking && "animate-spin")} />
+              <span className="hidden sm:inline">{t("header.refresh")}</span>
+            </Button>
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-l-none border-0 gap-1 px-2 text-xs text-muted-foreground"
+                  >
+                    {refreshMs === 0 ? t("autoRefresh.off") : REFRESH_OPTIONS.find((o) => o.ms === refreshMs)?.label ?? "5m"}
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                }
+              />
+              <PopoverContent align="start" className="w-36 p-1.5">
+                <p className="mb-1.5 px-1 text-xs text-muted-foreground">{t("autoRefresh.label")}</p>
+                {REFRESH_OPTIONS.map(({ ms, label }) => (
+                  <button
+                    key={ms}
+                    type="button"
+                    onClick={() => setRefreshMs(ms)}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-sm hover:bg-accent",
+                      refreshMs === ms && "font-semibold",
+                    )}
+                  >
+                    {ms === 0 ? t("autoRefresh.off") : label}
+                    {refreshMs === ms && <span className="text-xs text-muted-foreground">●</span>}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+          </div>
 
           {/* Share / Export dropdown — only when apps exist */}
           {isMounted && apps.length > 0 && (
@@ -1181,30 +1215,6 @@ export function StatusDashboard() {
                 <HelpCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 {t("header.howToUse")}
               </button>
-
-              <div className="my-1 h-px bg-border" />
-
-              {/* Auto-refresh interval */}
-              <div className="px-2 py-1.5">
-                <p className="mb-1.5 text-xs text-muted-foreground">{t("autoRefresh.label")}</p>
-                <div className="flex gap-1">
-                  {REFRESH_OPTIONS.map(({ ms, label }) => (
-                    <button
-                      key={ms}
-                      type="button"
-                      onClick={() => setRefreshMs(ms)}
-                      className={cn(
-                        "flex-1 rounded px-1.5 py-1 text-xs font-medium transition-colors",
-                        refreshMs === ms
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
-                      )}
-                    >
-                      {ms === 0 ? t("autoRefresh.off") : label}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <div className="my-1 h-px bg-border" />
 
