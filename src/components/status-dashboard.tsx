@@ -3,6 +3,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AlertTriangle,
+  Bell,
+  BellOff,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -27,6 +29,7 @@ import {
 } from "lucide-react";
 import { AddAppDialog } from "@/components/add-app-dialog";
 import { AppLogo } from "@/components/app-logo";
+import { JiraImportDialog } from "@/components/jira-import-dialog";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 import { QuickSetupDialog } from "@/components/quick-setup-dialog";
 import { ShareImportDialog } from "@/components/share-import-dialog";
@@ -504,6 +507,7 @@ export function StatusDashboard() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [quickSetupOpen, setQuickSetupOpen] = useState(false);
+  const [jiraImportOpen, setJiraImportOpen] = useState(false);
   // Auto-open onboarding on first visit (no apps stored yet). Lazy initializer
   // reads localStorage so the dialog renders open immediately after hydration —
   // no setState-in-effect needed.
@@ -523,6 +527,21 @@ export function StatusDashboard() {
   const [notices, setNotices] = useState<{ id: string; message: string }[]>([]);
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   const [shareImportApps, setShareImportApps] = useState<RegisteredApp[] | null>(null);
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">("default");
+
+  useEffect(() => {
+    if (typeof Notification === "undefined") {
+      setNotifPerm("unsupported");
+    } else {
+      setNotifPerm(Notification.permission);
+    }
+  }, []);
+
+  const requestNotifPerm = useCallback(async () => {
+    if (typeof Notification === "undefined") return;
+    const perm = await Notification.requestPermission();
+    setNotifPerm(perm);
+  }, []);
 
   // Use a ref so async callbacks always read the latest apps value
   const appsRef = useRef(apps);
@@ -627,8 +646,23 @@ export function StatusDashboard() {
       const id = Math.random().toString(36).slice(2, 9);
       setToasts((prev) => [...prev.slice(-4), { id, appName, from, to }]);
       setTimeout(() => dismissToast(id), 6000);
+
+      if (
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted" &&
+        typeof document !== "undefined" &&
+        document.hidden
+      ) {
+        const body =
+          to === "outage"
+            ? t("notification.outage", { appName })
+            : to === "degraded"
+            ? t("notification.degraded", { appName })
+            : t("notification.recovered", { appName });
+        try { new Notification(appName, { body, icon: "/favicon.svg" }); } catch { /* ignore */ }
+      }
     },
-    [dismissToast],
+    [dismissToast, t],
   );
 
   // ── Health checks ──────────────────────────────────────────────────────────
@@ -1052,6 +1086,38 @@ export function StatusDashboard() {
               }
             />
             <PopoverContent align="end" className="w-44 p-1">
+              {/* Import from Jira */}
+              <button
+                type="button"
+                onClick={() => setJiraImportOpen(true)}
+                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+              >
+                <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                {t("header.jiraImport")}
+              </button>
+
+              {/* Notifications */}
+              {notifPerm !== "unsupported" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (notifPerm !== "granted" && notifPerm !== "denied") void requestNotifPerm();
+                  }}
+                  disabled={notifPerm === "denied"}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {notifPerm === "granted"
+                    ? <BellOff className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    : <Bell className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  }
+                  {notifPerm === "granted"
+                    ? t("notification.enabled")
+                    : notifPerm === "denied"
+                    ? t("notification.denied")
+                    : t("notification.enable")}
+                </button>
+              )}
+
               {/* How to use */}
               <button
                 type="button"
@@ -1165,7 +1231,7 @@ export function StatusDashboard() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {t("empty.body")}
               </p>
-              <div className="mt-6 flex gap-3">
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <Button onClick={() => setQuickSetupOpen(true)}>
                   <Sparkles className="mr-1.5 h-4 w-4" />
                   {t("header.quickSetup")}
@@ -1173,6 +1239,10 @@ export function StatusDashboard() {
                 <Button variant="outline" onClick={() => setAddDialogOpen(true)}>
                   <PlusCircle className="mr-1.5 h-4 w-4" />
                   {t("header.addApp")}
+                </Button>
+                <Button variant="outline" onClick={() => setJiraImportOpen(true)}>
+                  <Download className="mr-1.5 h-4 w-4" />
+                  {t("header.jiraImport")}
                 </Button>
               </div>
             </div>
@@ -1350,6 +1420,13 @@ export function StatusDashboard() {
               onClose={() => setShareImportApps(null)}
             />
           )}
+          <JiraImportDialog
+            open={jiraImportOpen}
+            onOpenChange={setJiraImportOpen}
+            onImport={handleBulkAddApps}
+            existingIds={existingIds}
+            existingNames={existingNames}
+          />
         </>
       )}
     </main>

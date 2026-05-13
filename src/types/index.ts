@@ -187,6 +187,24 @@ export const VENDOR_STATUS_MAP: Record<string, string> = {
   "teamlead":           "https://teamlead.statuspage.io/api/v2/status.json",
   "mindpro":            "https://mindpro.statuspage.io/api/v2/status.json",
   "cypress":            "https://cypress.statuspage.io/api/v2/status.json",
+
+  // ── Coverage expansion (audit 2026-05-13) ────────────────────────────────
+  // Document / knowledge-base tools
+  "communardo":         "https://status.communardo.de/api/v2/summary.json",
+  "mibex":              "https://mibexsoftware.statuspage.io/api/v2/summary.json",
+  // Agile & project management
+  "actonic":            "https://actonic.statuspage.io/api/v2/summary.json",
+  "jexo":               "https://jexo.statuspage.io/api/v2/summary.json",
+  "apwide":             "https://apwide.statuspage.io/api/v2/summary.json",
+  "amoeboids":          "https://amoeboids.statuspage.io/api/v2/summary.json",
+  // Analytics & reporting
+  "screenful":          "https://status.screenful.com/api/v2/summary.json",
+  // Integrations & connectors
+  "yasoon":             "https://status.yasoon.com/api/v2/summary.json",
+  "go2group":           "https://go2group.statuspage.io/api/v2/summary.json",
+  // Professional services / implementation
+  "servicerocket":      "https://servicerocket.statuspage.io/api/v2/summary.json",
+  "clearvision":        "https://status.clearvision-cm.com/api/v2/summary.json",
 };
 
 /**

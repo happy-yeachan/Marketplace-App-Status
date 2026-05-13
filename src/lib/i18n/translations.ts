@@ -104,9 +104,39 @@ const en: Translations = {
   "share.importSuccess": "{count} apps imported.",
   "share.importDuplicate": "{added} apps imported, {skipped} already in your list.",
 
+  // Jira import
+  "header.jiraImport": "Import from Jira",
+  "jiraImport.title": "Import from Jira",
+  "jiraImport.description": "Connect to your Jira Cloud instance to automatically import your installed apps.",
+  "jiraImport.urlLabel": "Jira URL",
+  "jiraImport.urlPlaceholder": "yourcompany.atlassian.net",
+  "jiraImport.urlHint": "Your Jira Cloud domain (without https://)",
+  "jiraImport.emailLabel": "Email",
+  "jiraImport.emailPlaceholder": "you@yourcompany.com",
+  "jiraImport.tokenLabel": "API Token",
+  "jiraImport.tokenHint": "Generate at Atlassian ID → Security → API tokens",
+  "jiraImport.tokenLink": "Generate token →",
+  "jiraImport.importButton": "Import apps",
+  "jiraImport.importing": "Importing…",
+  "jiraImport.found": "{total} apps found · {mapped} with status page",
+  "jiraImport.add": "Add {n} apps",
+  "jiraImport.backToForm": "← Change credentials",
+  "jiraImport.error.auth": "Authentication failed. Check your email and API token.",
+  "jiraImport.error.notFound": "Jira URL not found. Use your Atlassian Cloud domain.",
+  "jiraImport.error.timeout": "Request timed out. Check your Jira URL and try again.",
+  "jiraImport.error.generic": "Could not connect to Jira. Try again later.",
+
   // Theme
   "theme.toLight": "Switch to light mode",
   "theme.toDark": "Switch to dark mode",
+
+  // Notifications
+  "notification.enable": "Enable notifications",
+  "notification.enabled": "Notifications on",
+  "notification.denied": "Notifications blocked",
+  "notification.degraded": "{appName} is degraded",
+  "notification.outage": "{appName} is experiencing an outage",
+  "notification.recovered": "{appName} is back to operational",
 
   // Privacy page
   "privacy.title": "Privacy Policy",
@@ -250,9 +280,39 @@ const ja: Translations = {
   "share.importSuccess": "{count} 件のアプリをインポートしました。",
   "share.importDuplicate": "{added} 件をインポート、{skipped} 件はすでに追加済みです。",
 
+  // Jira import
+  "header.jiraImport": "Jira からインポート",
+  "jiraImport.title": "Jira からインポート",
+  "jiraImport.description": "Jira Cloud インスタンスに接続して、インストール済みアプリを自動で取り込みます。",
+  "jiraImport.urlLabel": "Jira URL",
+  "jiraImport.urlPlaceholder": "yourcompany.atlassian.net",
+  "jiraImport.urlHint": "Jira Cloud のドメイン（https:// は不要）",
+  "jiraImport.emailLabel": "メールアドレス",
+  "jiraImport.emailPlaceholder": "you@yourcompany.com",
+  "jiraImport.tokenLabel": "API トークン",
+  "jiraImport.tokenHint": "Atlassian ID → セキュリティ → API トークン で生成",
+  "jiraImport.tokenLink": "トークンを生成 →",
+  "jiraImport.importButton": "アプリをインポート",
+  "jiraImport.importing": "インポート中…",
+  "jiraImport.found": "{total} 件のアプリが見つかりました · {mapped} 件がステータスページ対応",
+  "jiraImport.add": "{n} 件追加",
+  "jiraImport.backToForm": "← 認証情報を変更",
+  "jiraImport.error.auth": "認証に失敗しました。メールアドレスと API トークンをご確認ください。",
+  "jiraImport.error.notFound": "Jira URL が見つかりません。Atlassian Cloud のドメインを使用してください。",
+  "jiraImport.error.timeout": "リクエストがタイムアウトしました。Jira URL を確認して再度お試しください。",
+  "jiraImport.error.generic": "Jira に接続できませんでした。しばらくしてから再度お試しください。",
+
   // Theme
   "theme.toLight": "ライトモードに切替",
   "theme.toDark": "ダークモードに切替",
+
+  // Notifications
+  "notification.enable": "通知を有効にする",
+  "notification.enabled": "通知オン",
+  "notification.denied": "通知がブロックされています",
+  "notification.degraded": "{appName} が不安定です",
+  "notification.outage": "{appName} で障害が発生しています",
+  "notification.recovered": "{appName} が復旧しました",
 
   // Privacy
   "privacy.title": "プライバシーポリシー",
@@ -398,9 +458,39 @@ const de: Translations = {
   "share.importSuccess": "{count} Apps importiert.",
   "share.importDuplicate": "{added} Apps importiert, {skipped} bereits in Ihrer Liste.",
 
+  // Jira import
+  "header.jiraImport": "Aus Jira importieren",
+  "jiraImport.title": "Aus Jira importieren",
+  "jiraImport.description": "Verbinden Sie sich mit Ihrer Jira-Cloud-Instanz, um installierte Apps automatisch zu importieren.",
+  "jiraImport.urlLabel": "Jira-URL",
+  "jiraImport.urlPlaceholder": "yourcompany.atlassian.net",
+  "jiraImport.urlHint": "Ihre Jira-Cloud-Domain (ohne https://)",
+  "jiraImport.emailLabel": "E-Mail",
+  "jiraImport.emailPlaceholder": "you@yourcompany.com",
+  "jiraImport.tokenLabel": "API-Token",
+  "jiraImport.tokenHint": "Generieren unter Atlassian ID → Sicherheit → API-Token",
+  "jiraImport.tokenLink": "Token generieren →",
+  "jiraImport.importButton": "Apps importieren",
+  "jiraImport.importing": "Importiere…",
+  "jiraImport.found": "{total} Apps gefunden · {mapped} mit Statusseite",
+  "jiraImport.add": "{n} Apps hinzufügen",
+  "jiraImport.backToForm": "← Zugangsdaten ändern",
+  "jiraImport.error.auth": "Authentifizierung fehlgeschlagen. Überprüfen Sie E-Mail und API-Token.",
+  "jiraImport.error.notFound": "Jira-URL nicht gefunden. Verwenden Sie Ihre Atlassian-Cloud-Domain.",
+  "jiraImport.error.timeout": "Zeitüberschreitung. Überprüfen Sie die Jira-URL und versuchen Sie es erneut.",
+  "jiraImport.error.generic": "Verbindung zu Jira fehlgeschlagen. Bitte versuchen Sie es später erneut.",
+
   // Theme
   "theme.toLight": "Zum hellen Modus wechseln",
   "theme.toDark": "Zum dunklen Modus wechseln",
+
+  // Notifications
+  "notification.enable": "Benachrichtigungen aktivieren",
+  "notification.enabled": "Benachrichtigungen aktiv",
+  "notification.denied": "Benachrichtigungen blockiert",
+  "notification.degraded": "{appName} ist beeinträchtigt",
+  "notification.outage": "{appName} hat einen Ausfall",
+  "notification.recovered": "{appName} ist wieder verfügbar",
 
   // Privacy
   "privacy.title": "Datenschutzerklärung",
@@ -546,9 +636,39 @@ const ko: Translations = {
   "share.importSuccess": "{count}개 앱을 가져왔습니다.",
   "share.importDuplicate": "{added}개 가져옴, {skipped}개는 이미 추가돼 있습니다.",
 
+  // Jira import
+  "header.jiraImport": "Jira에서 가져오기",
+  "jiraImport.title": "Jira에서 가져오기",
+  "jiraImport.description": "Jira Cloud 인스턴스에 연결하여 설치된 앱을 자동으로 가져옵니다.",
+  "jiraImport.urlLabel": "Jira URL",
+  "jiraImport.urlPlaceholder": "yourcompany.atlassian.net",
+  "jiraImport.urlHint": "Jira Cloud 도메인 (https:// 제외)",
+  "jiraImport.emailLabel": "이메일",
+  "jiraImport.emailPlaceholder": "you@yourcompany.com",
+  "jiraImport.tokenLabel": "API 토큰",
+  "jiraImport.tokenHint": "Atlassian ID → 보안 → API 토큰에서 생성",
+  "jiraImport.tokenLink": "토큰 생성 →",
+  "jiraImport.importButton": "앱 가져오기",
+  "jiraImport.importing": "가져오는 중…",
+  "jiraImport.found": "앱 {total}개 발견 · {mapped}개 상태 페이지 있음",
+  "jiraImport.add": "{n}개 추가",
+  "jiraImport.backToForm": "← 인증 정보 변경",
+  "jiraImport.error.auth": "인증에 실패했습니다. 이메일과 API 토큰을 확인하세요.",
+  "jiraImport.error.notFound": "Jira URL을 찾을 수 없습니다. Atlassian Cloud 도메인을 사용하세요.",
+  "jiraImport.error.timeout": "요청 시간이 초과됐습니다. Jira URL을 확인하고 다시 시도하세요.",
+  "jiraImport.error.generic": "Jira에 연결할 수 없습니다. 잠시 후 다시 시도하세요.",
+
   // Theme
   "theme.toLight": "라이트 모드로 전환",
   "theme.toDark": "다크 모드로 전환",
+
+  // Notifications
+  "notification.enable": "알림 활성화",
+  "notification.enabled": "알림 켜짐",
+  "notification.denied": "알림이 차단됨",
+  "notification.degraded": "{appName}이(가) 불안정합니다",
+  "notification.outage": "{appName}에 장애가 발생했습니다",
+  "notification.recovered": "{appName}이(가) 정상 복구되었습니다",
 
   // Privacy
   "privacy.title": "개인정보처리방침",
@@ -694,9 +814,39 @@ const fr: Translations = {
   "share.importSuccess": "{count} apps importées.",
   "share.importDuplicate": "{added} apps importées, {skipped} déjà dans votre liste.",
 
+  // Jira import
+  "header.jiraImport": "Importer depuis Jira",
+  "jiraImport.title": "Importer depuis Jira",
+  "jiraImport.description": "Connectez-vous à votre instance Jira Cloud pour importer automatiquement vos apps installées.",
+  "jiraImport.urlLabel": "URL Jira",
+  "jiraImport.urlPlaceholder": "yourcompany.atlassian.net",
+  "jiraImport.urlHint": "Votre domaine Jira Cloud (sans https://)",
+  "jiraImport.emailLabel": "E-mail",
+  "jiraImport.emailPlaceholder": "you@yourcompany.com",
+  "jiraImport.tokenLabel": "Token API",
+  "jiraImport.tokenHint": "Générez-le depuis Atlassian ID → Sécurité → Tokens API",
+  "jiraImport.tokenLink": "Générer un token →",
+  "jiraImport.importButton": "Importer les apps",
+  "jiraImport.importing": "Importation…",
+  "jiraImport.found": "{total} apps trouvées · {mapped} avec page de statut",
+  "jiraImport.add": "Ajouter {n} apps",
+  "jiraImport.backToForm": "← Modifier les identifiants",
+  "jiraImport.error.auth": "Authentification échouée. Vérifiez votre e-mail et votre token API.",
+  "jiraImport.error.notFound": "URL Jira introuvable. Utilisez votre domaine Atlassian Cloud.",
+  "jiraImport.error.timeout": "Délai dépassé. Vérifiez votre URL Jira et réessayez.",
+  "jiraImport.error.generic": "Impossible de se connecter à Jira. Réessayez plus tard.",
+
   // Theme
   "theme.toLight": "Passer au mode clair",
   "theme.toDark": "Passer au mode sombre",
+
+  // Notifications
+  "notification.enable": "Activer les notifications",
+  "notification.enabled": "Notifications activées",
+  "notification.denied": "Notifications bloquées",
+  "notification.degraded": "{appName} est dégradé",
+  "notification.outage": "{appName} est en panne",
+  "notification.recovered": "{appName} est de nouveau opérationnel",
 
   // Privacy
   "privacy.title": "Politique de confidentialité",
