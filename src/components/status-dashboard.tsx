@@ -76,6 +76,14 @@ const HISTORY_KEY = "jira-marketplace-history";
 const LATEST_KEY = "jira-marketplace-latest";
 const LAST_CHECKED_KEY = "jira-marketplace-last-checked";
 const NOTIF_ENABLED_KEY = "jira-marketplace-notifications";
+const REFRESH_INTERVAL_KEY = "jira-marketplace-refresh-interval";
+
+const REFRESH_OPTIONS = [
+  { ms: 0,           label: "Off" },
+  { ms: 60_000,      label: "1m"  },
+  { ms: 5 * 60_000,  label: "5m"  },
+  { ms: 15 * 60_000, label: "15m" },
+] as const;
 const HISTORY_MAX = 30;
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 const RECHECK_COOLDOWN_MS = 90_000; // skip initial scan if last check was < 90 s ago
@@ -530,6 +538,7 @@ export function StatusDashboard() {
   const [shareImportApps, setShareImportApps] = useState<RegisteredApp[] | null>(null);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">("default");
   const [notifEnabled, setNotifEnabled] = useState(false);
+  const [refreshMs, setRefreshMsState] = useState<number>(5 * 60_000);
 
   useEffect(() => {
     if (typeof Notification === "undefined") {
@@ -540,6 +549,19 @@ export function StatusDashboard() {
         setNotifEnabled(localStorage.getItem(NOTIF_ENABLED_KEY) !== "false");
       }
     }
+  }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(REFRESH_INTERVAL_KEY);
+    if (stored !== null) {
+      const parsed = Number(stored);
+      if (REFRESH_OPTIONS.some((o) => o.ms === parsed)) setRefreshMsState(parsed);
+    }
+  }, []);
+
+  const setRefreshMs = useCallback((ms: number) => {
+    setRefreshMsState(ms);
+    localStorage.setItem(REFRESH_INTERVAL_KEY, String(ms));
   }, []);
 
   const toggleNotif = useCallback(async () => {
@@ -822,15 +844,14 @@ export function StatusDashboard() {
   // (Onboarding auto-open is handled by the lazy initializer of `onboardingOpen`
   // above — no effect needed.)
 
-  // Auto-refresh every 5 minutes. checkAllStatuses is intentionally omitted
-  // from deps — it's redefined every render, and re-firing the interval setup
-  // on every render would cancel + reschedule the timer.
+  // Auto-refresh at the user-selected interval. checkAllStatuses is intentionally
+  // omitted from deps — it captures a stable ref internally.
   useEffect(() => {
-    if (!isMounted) return;
-    const id = setInterval(() => void checkAllStatuses(), AUTO_REFRESH_MS);
+    if (!isMounted || refreshMs === 0) return;
+    const id = setInterval(() => void checkAllStatuses(), refreshMs);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted]);
+  }, [isMounted, refreshMs]);
 
   // ── Sort ───────────────────────────────────────────────────────────────────
   const handleSort = (key: SortKey) => {
@@ -1160,6 +1181,30 @@ export function StatusDashboard() {
                 <HelpCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 {t("header.howToUse")}
               </button>
+
+              <div className="my-1 h-px bg-border" />
+
+              {/* Auto-refresh interval */}
+              <div className="px-2 py-1.5">
+                <p className="mb-1.5 text-xs text-muted-foreground">{t("autoRefresh.label")}</p>
+                <div className="flex gap-1">
+                  {REFRESH_OPTIONS.map(({ ms, label }) => (
+                    <button
+                      key={ms}
+                      type="button"
+                      onClick={() => setRefreshMs(ms)}
+                      className={cn(
+                        "flex-1 rounded px-1.5 py-1 text-xs font-medium transition-colors",
+                        refreshMs === ms
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
+                      )}
+                    >
+                      {ms === 0 ? t("autoRefresh.off") : label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="my-1 h-px bg-border" />
 

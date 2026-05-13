@@ -95,6 +95,10 @@ const en: Translations = {
   "footer.feedback": "Feedback",
   "footer.sponsor": "Sponsor",
 
+  // Auto-refresh
+  "autoRefresh.label": "Auto-refresh",
+  "autoRefresh.off": "Off",
+
   // Share
   "share.tooltip": "Share app list",
   "share.copied": "Link copied!",
@@ -202,6 +206,10 @@ const ja: Translations = {
   "header.quickSetup": "クイック設定",
   "header.addApp": "アプリを追加",
   "header.howToUse": "使い方",
+
+  // Auto-refresh
+  "autoRefresh.label": "自動更新",
+  "autoRefresh.off": "オフ",
 
   // Status
   "status.operational": "正常",
@@ -382,6 +390,10 @@ const de: Translations = {
   "header.addApp": "App hinzufügen",
   "header.howToUse": "Anleitung",
 
+  // Auto-refresh
+  "autoRefresh.label": "Automatische Aktualisierung",
+  "autoRefresh.off": "Aus",
+
   // Status
   "status.operational": "Betriebsbereit",
   "status.degraded": "Eingeschränkt",
@@ -561,6 +573,10 @@ const ko: Translations = {
   "header.addApp": "앱 추가",
   "header.howToUse": "사용 방법",
 
+  // Auto-refresh
+  "autoRefresh.label": "자동 새로고침",
+  "autoRefresh.off": "끄기",
+
   // Status
   "status.operational": "정상",
   "status.degraded": "성능 저하",
@@ -739,6 +755,10 @@ const fr: Translations = {
   "header.quickSetup": "Configuration rapide",
   "header.addApp": "Ajouter une app",
   "header.howToUse": "Mode d'emploi",
+
+  // Auto-refresh
+  "autoRefresh.label": "Actualisation auto",
+  "autoRefresh.off": "Désactivé",
 
   // Status
   "status.operational": "Opérationnel",
