@@ -730,6 +730,16 @@ export function StatusDashboard() {
   const latestByIdRef = useRef<Record<string, HealthCheckResult>>({});
   useEffect(() => { latestByIdRef.current = latestById; }, [latestById]);
 
+  // Update browser tab title to reflect issue count
+  useEffect(() => {
+    const issueCount = Object.values(latestById).filter(
+      (r) => r.status === "degraded" || r.status === "outage",
+    ).length;
+    document.title = issueCount > 0
+      ? `⚠ ${issueCount} | Marketplace App Status`
+      : "Marketplace App Status";
+  }, [latestById]);
+
   // Stable ref so callbacks declared before applyResults can call it
   const applyResultsRef = useRef(applyResults);
   useEffect(() => { applyResultsRef.current = applyResults; }, [applyResults]);
@@ -1031,7 +1041,7 @@ export function StatusDashboard() {
             {t("header.disclaimer")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Refresh */}
           <Button
             variant="outline"
@@ -1040,7 +1050,7 @@ export function StatusDashboard() {
             disabled={isChecking}
           >
             <RefreshCw className={cn("h-3.5 w-3.5", isChecking && "animate-spin")} />
-            {t("header.refresh")}
+            <span className="hidden sm:inline">{t("header.refresh")}</span>
           </Button>
 
           {/* Share / Export dropdown — only when apps exist */}
@@ -1083,7 +1093,7 @@ export function StatusDashboard() {
             onClick={() => setQuickSetupOpen(true)}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            {t("header.quickSetup")}
+            <span className="hidden sm:inline">{t("header.quickSetup")}</span>
           </Button>
           <Button size="sm" onClick={() => setAddDialogOpen(true)}>
             <PlusCircle className="h-3.5 w-3.5" />
@@ -1270,7 +1280,7 @@ export function StatusDashboard() {
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border bg-card">
+            <div className="overflow-x-auto rounded-lg border bg-card">
               <Table className="w-full table-fixed">
                 <TableHeader>
                   <TableRow>
