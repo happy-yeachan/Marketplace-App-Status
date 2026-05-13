@@ -75,6 +75,7 @@ const APPS_KEY = "jira-marketplace-apps";
 const HISTORY_KEY = "jira-marketplace-history";
 const LATEST_KEY = "jira-marketplace-latest";
 const LAST_CHECKED_KEY = "jira-marketplace-last-checked";
+const NOTIF_ENABLED_KEY = "jira-marketplace-notifications";
 const HISTORY_MAX = 30;
 const AUTO_REFRESH_MS = 5 * 60 * 1000;
 const RECHECK_COOLDOWN_MS = 90_000; // skip initial scan if last check was < 90 s ago
@@ -528,20 +529,34 @@ export function StatusDashboard() {
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   const [shareImportApps, setShareImportApps] = useState<RegisteredApp[] | null>(null);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">("default");
+  const [notifEnabled, setNotifEnabled] = useState(false);
 
   useEffect(() => {
     if (typeof Notification === "undefined") {
       setNotifPerm("unsupported");
     } else {
       setNotifPerm(Notification.permission);
+      if (Notification.permission === "granted") {
+        setNotifEnabled(localStorage.getItem(NOTIF_ENABLED_KEY) !== "false");
+      }
     }
   }, []);
 
-  const requestNotifPerm = useCallback(async () => {
+  const toggleNotif = useCallback(async () => {
     if (typeof Notification === "undefined") return;
-    const perm = await Notification.requestPermission();
-    setNotifPerm(perm);
-  }, []);
+    if (notifPerm === "default") {
+      const perm = await Notification.requestPermission();
+      setNotifPerm(perm);
+      if (perm === "granted") {
+        setNotifEnabled(true);
+        localStorage.setItem(NOTIF_ENABLED_KEY, "true");
+      }
+    } else if (notifPerm === "granted") {
+      const next = !notifEnabled;
+      setNotifEnabled(next);
+      localStorage.setItem(NOTIF_ENABLED_KEY, String(next));
+    }
+  }, [notifPerm, notifEnabled]);
 
   // Use a ref so async callbacks always read the latest apps value
   const appsRef = useRef(apps);
@@ -650,6 +665,7 @@ export function StatusDashboard() {
       if (
         typeof Notification !== "undefined" &&
         Notification.permission === "granted" &&
+        notifEnabled &&
         typeof document !== "undefined" &&
         document.hidden
       ) {
@@ -662,7 +678,7 @@ export function StatusDashboard() {
         try { new Notification(appName, { body, icon: "/favicon.svg" }); } catch { /* ignore */ }
       }
     },
-    [dismissToast, t],
+    [dismissToast, notifEnabled, t],
   );
 
   // ── Health checks ──────────────────────────────────────────────────────────
@@ -1100,18 +1116,25 @@ export function StatusDashboard() {
               {notifPerm !== "unsupported" && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (notifPerm !== "granted" && notifPerm !== "denied") void requestNotifPerm();
-                  }}
+                  onClick={() => void toggleNotif()}
                   disabled={notifPerm === "denied"}
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent disabled:cursor-not-allowed",
+                    notifPerm === "granted" && notifEnabled
+                      ? "text-emerald-600"
+                      : notifPerm === "denied"
+                      ? "text-amber-500 opacity-60"
+                      : "",
+                  )}
                 >
-                  {notifPerm === "granted"
-                    ? <BellOff className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    : <Bell className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  {notifPerm === "granted" && notifEnabled
+                    ? <Bell className="h-3.5 w-3.5 shrink-0" />
+                    : <BellOff className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   }
-                  {notifPerm === "granted"
+                  {notifPerm === "granted" && notifEnabled
                     ? t("notification.enabled")
+                    : notifPerm === "granted" && !notifEnabled
+                    ? t("notification.disabled")
                     : notifPerm === "denied"
                     ? t("notification.denied")
                     : t("notification.enable")}

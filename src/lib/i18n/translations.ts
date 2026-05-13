@@ -133,6 +133,7 @@ const en: Translations = {
   // Notifications
   "notification.enable": "Enable notifications",
   "notification.enabled": "Notifications on",
+  "notification.disabled": "Notifications off",
   "notification.denied": "Notifications blocked",
   "notification.degraded": "{appName} is degraded",
   "notification.outage": "{appName} is experiencing an outage",
@@ -309,6 +310,7 @@ const ja: Translations = {
   // Notifications
   "notification.enable": "通知を有効にする",
   "notification.enabled": "通知オン",
+  "notification.disabled": "通知オフ",
   "notification.denied": "通知がブロックされています",
   "notification.degraded": "{appName} が不安定です",
   "notification.outage": "{appName} で障害が発生しています",
@@ -487,6 +489,7 @@ const de: Translations = {
   // Notifications
   "notification.enable": "Benachrichtigungen aktivieren",
   "notification.enabled": "Benachrichtigungen aktiv",
+  "notification.disabled": "Benachrichtigungen deaktiviert",
   "notification.denied": "Benachrichtigungen blockiert",
   "notification.degraded": "{appName} ist beeinträchtigt",
   "notification.outage": "{appName} hat einen Ausfall",
@@ -665,6 +668,7 @@ const ko: Translations = {
   // Notifications
   "notification.enable": "알림 활성화",
   "notification.enabled": "알림 켜짐",
+  "notification.disabled": "알림 꺼짐",
   "notification.denied": "알림이 차단됨",
   "notification.degraded": "{appName}이(가) 불안정합니다",
   "notification.outage": "{appName}에 장애가 발생했습니다",
@@ -843,6 +847,7 @@ const fr: Translations = {
   // Notifications
   "notification.enable": "Activer les notifications",
   "notification.enabled": "Notifications activées",
+  "notification.disabled": "Notifications désactivées",
   "notification.denied": "Notifications bloquées",
   "notification.degraded": "{appName} est dégradé",
   "notification.outage": "{appName} est en panne",
