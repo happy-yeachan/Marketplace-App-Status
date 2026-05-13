@@ -121,9 +121,16 @@ interface StatuspageComponent {
   group_id?: string;
 }
 
+interface StatuspageIncident {
+  name?: string;
+  status?: string; // "investigating" | "identified" | "monitoring" | "resolved"
+  incident_updates?: Array<{ body?: string }>;
+}
+
 interface StatuspageSummary {
   status?: { indicator?: string; description?: string };
   components?: StatuspageComponent[];
+  incidents?: StatuspageIncident[];
 }
 
 function globalFromStatuspageIndicator(indicator?: string): AppHealthStatus {
@@ -144,9 +151,15 @@ interface InstatusComponent {
   status?: string; // "OPERATIONAL" | "DEGRADED" | "PARTIALOUTAGE" | "MAJOROUTAGE" | "UNDERMAINTENANCE"
 }
 
+interface InstatusIncident {
+  name?: string;
+  status?: string;
+  updates?: Array<{ body?: string }>;
+}
+
 interface InstatusSummary {
   page?: { status?: string }; // "UP" | "HASISSUES" | "UNDERMAINTENANCE"
-  activeIncidents?: unknown[];
+  activeIncidents?: InstatusIncident[];
   activeMaintenances?: unknown[];
   components?: InstatusComponent[];
 }
@@ -334,6 +347,18 @@ function extractStatuspageStatus(
     };
   }
 
+  // Prefer active incident name over generic component/global message
+  const activeIncident = (payload.incidents ?? []).find(
+    (i) => i.status && i.status !== "resolved",
+  );
+  if (activeIncident?.name) {
+    const latestBody = activeIncident.incident_updates?.[0]?.body?.trim() ?? "";
+    const incidentDetail = latestBody.length > 0 && latestBody.length <= 200
+      ? `${activeIncident.name} — ${latestBody}`
+      : activeIncident.name;
+    return { status: globalStatus, message: incidentDetail };
+  }
+
   return { status: globalStatus, message: globalMessage };
 }
 
@@ -346,6 +371,17 @@ function extractInstatusStatus(
   const components = (payload.components ?? [])
     .filter((c): c is InstatusComponent & { name: string } => Boolean(c.name))
     .map((c) => ({ name: c.name, rawStatus: c.status ?? "" }));
+
+  const activeIncident = (payload.activeIncidents ?? []).find(
+    (i) => i.status && i.status.toUpperCase() !== "RESOLVED",
+  );
+  if (activeIncident?.name) {
+    const latestBody = activeIncident.updates?.[0]?.body?.trim() ?? "";
+    const incidentDetail = latestBody.length > 0 && latestBody.length <= 200
+      ? `${activeIncident.name} — ${latestBody}`
+      : activeIncident.name;
+    return { status: globalStatus, message: incidentDetail };
+  }
 
   const fuzzy = findFuzzyNameComponent(appName, components);
   if (fuzzy?.rawStatus) {
