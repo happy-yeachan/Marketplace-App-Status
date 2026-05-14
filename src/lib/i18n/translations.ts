@@ -143,6 +143,9 @@ const en: Translations = {
   "notification.outage": "{appName} is experiencing an outage",
   "notification.recovered": "{appName} is back to operational",
 
+  // Atlassian Platform section
+  "atlassian.label": "Atlassian Platform",
+
   // Privacy page
   "privacy.title": "Privacy Policy",
   "privacy.lastUpdated": "Last updated: 2026-05-03",
@@ -323,6 +326,9 @@ const ja: Translations = {
   "notification.degraded": "{appName} が不安定です",
   "notification.outage": "{appName} で障害が発生しています",
   "notification.recovered": "{appName} が復旧しました",
+
+  // Atlassian Platform section
+  "atlassian.label": "Atlassian プラットフォーム",
 
   // Privacy
   "privacy.title": "プライバシーポリシー",
@@ -507,6 +513,9 @@ const de: Translations = {
   "notification.outage": "{appName} hat einen Ausfall",
   "notification.recovered": "{appName} ist wieder verfügbar",
 
+  // Atlassian Platform section
+  "atlassian.label": "Atlassian Plattform",
+
   // Privacy
   "privacy.title": "Datenschutzerklärung",
   "privacy.lastUpdated": "Zuletzt aktualisiert: 03.05.2026",
@@ -690,6 +699,9 @@ const ko: Translations = {
   "notification.outage": "{appName}에 장애가 발생했습니다",
   "notification.recovered": "{appName}이(가) 정상 복구되었습니다",
 
+  // Atlassian Platform section
+  "atlassian.label": "Atlassian 플랫폼",
+
   // Privacy
   "privacy.title": "개인정보처리방침",
   "privacy.lastUpdated": "최종 업데이트: 2026-05-03",
@@ -872,6 +884,9 @@ const fr: Translations = {
   "notification.degraded": "{appName} est dégradé",
   "notification.outage": "{appName} est en panne",
   "notification.recovered": "{appName} est de nouveau opérationnel",
+
+  // Atlassian Platform section
+  "atlassian.label": "Plateforme Atlassian",
 
   // Privacy
   "privacy.title": "Politique de confidentialité",
