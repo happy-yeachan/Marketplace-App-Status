@@ -188,6 +188,9 @@ export const VENDOR_STATUS_MAP: Record<string, string> = {
   "mindpro":            "https://mindpro.statuspage.io/api/v2/status.json",
   "cypress":            "https://cypress.statuspage.io/api/v2/status.json",
 
+  // ── Coverage expansion (audit 2026-05-14) ────────────────────────────────
+  "meetical":          "https://meetical.statuspage.io/api/v2/summary.json",
+
   // ── Coverage expansion (audit 2026-05-13) ────────────────────────────────
   // Document / knowledge-base tools
   "communardo":         "https://status.communardo.de/api/v2/summary.json",

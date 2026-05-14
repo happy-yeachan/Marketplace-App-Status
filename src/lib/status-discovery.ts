@@ -180,8 +180,7 @@ export function normalizeVendorName(rawVendor: string): string {
   if (
     l.includes("adaptavist") ||
     l.includes("onresolve") ||
-    l.includes("brikit") ||
-    l.includes("meetical")
+    l.includes("brikit")
   ) {
     return "adaptavist";
   }
