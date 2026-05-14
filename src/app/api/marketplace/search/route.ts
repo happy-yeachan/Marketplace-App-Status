@@ -217,7 +217,7 @@ export async function GET(request: Request) {
         Accept: "application/json",
         "User-Agent": "NextJS-Marketplace-Proxy/1.0",
       },
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
 
     if (!res.ok) {
@@ -244,7 +244,11 @@ export async function GET(request: Request) {
     ]);
 
     setCachedSearch(cacheKey, items);
-    return NextResponse.json({ items });
+    return NextResponse.json({ items }, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown upstream error";
     console.error("[marketplace/search] fetch failed:", message);
