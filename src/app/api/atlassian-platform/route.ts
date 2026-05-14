@@ -18,20 +18,31 @@ const INDICATOR_RANK: Record<string, number> = {
 };
 
 const PRODUCTS: Array<{ name: string; url: string }> = [
-  { name: "Jira",                    url: "https://jira-software.status.atlassian.com/api/v2/status.json" },
-  { name: "Jira Service Management", url: "https://jira-service-management.status.atlassian.com/api/v2/status.json" },
-  { name: "Jira Work Management",    url: "https://jira-work-management.status.atlassian.com/api/v2/status.json" },
-  { name: "Jira Product Discovery",  url: "https://jira-product-discovery.status.atlassian.com/api/v2/status.json" },
-  { name: "Confluence",              url: "https://confluence.status.atlassian.com/api/v2/status.json" },
-  { name: "Jira Align",              url: "https://jira-align.status.atlassian.com/api/v2/status.json" },
-  { name: "Bitbucket",               url: "https://status.bitbucket.org/api/v2/status.json" },
-  { name: "Trello",                  url: "https://www.trellostatus.com/api/v2/status.json" },
-  { name: "Opsgenie",                url: "https://status.opsgenie.com/api/v2/status.json" },
-  { name: "Compass",                 url: "https://compass.status.atlassian.com/api/v2/status.json" },
-  { name: "Atlas",                   url: "https://atlas.status.atlassian.com/api/v2/status.json" },
-  { name: "Rovo",                    url: "https://rovo.status.atlassian.com/api/v2/status.json" },
-  { name: "Loom",                    url: "https://loom.status.atlassian.com/api/v2/status.json" },
-  { name: "Focus",                   url: "https://focus.status.atlassian.com/api/v2/status.json" },
+  // ── Core Jira family ─────────────────────────────────────────────────────
+  { name: "Jira",                       url: "https://jira-software.status.atlassian.com/api/v2/status.json" },
+  { name: "Jira Service Management",    url: "https://jira-service-management.status.atlassian.com/api/v2/status.json" },
+  { name: "Jira Work Management",       url: "https://jira-work-management.status.atlassian.com/api/v2/status.json" },
+  { name: "Jira Product Discovery",     url: "https://jira-product-discovery.status.atlassian.com/api/v2/status.json" },
+  { name: "Jira Align",                 url: "https://jira-align.status.atlassian.com/api/v2/status.json" },
+  // ── Other products ────────────────────────────────────────────────────────
+  { name: "Confluence",                 url: "https://confluence.status.atlassian.com/api/v2/status.json" },
+  { name: "Bitbucket",                  url: "https://status.bitbucket.org/api/v2/status.json" },
+  { name: "Trello",                     url: "https://www.trellostatus.com/api/v2/status.json" },
+  { name: "Opsgenie",                   url: "https://status.opsgenie.com/api/v2/status.json" },
+  { name: "Guard",                      url: "https://guard.status.atlassian.com/api/v2/status.json" },
+  { name: "Compass",                    url: "https://compass.status.atlassian.com/api/v2/status.json" },
+  { name: "Atlas",                      url: "https://atlas.status.atlassian.com/api/v2/status.json" },
+  { name: "Atlassian Analytics",        url: "https://analytics.status.atlassian.com/api/v2/status.json" },
+  { name: "Rovo",                       url: "https://rovo.status.atlassian.com/api/v2/status.json" },
+  { name: "Rovo Dev",                   url: "https://rovodev.status.atlassian.com/api/v2/status.json" },
+  { name: "Atlassian Migrations",       url: "https://migrations.status.atlassian.com/api/v2/status.json" },
+  { name: "Focus",                      url: "https://focus.status.atlassian.com/api/v2/status.json" },
+  { name: "Loom",                       url: "https://loom.status.atlassian.com/api/v2/status.json" },
+  { name: "Talent",                     url: "https://talent.status.atlassian.com/api/v2/status.json" },
+  { name: "Customer Service Management",url: "https://customer-service-management.status.atlassian.com/api/v2/status.json" },
+  { name: "Atlassian Support",          url: "https://support.status.atlassian.com/api/v2/status.json" },
+  { name: "Atlassian Partners",         url: "https://partners.status.atlassian.com/api/v2/status.json" },
+  { name: "Admin Experience",           url: "https://admin.status.atlassian.com/api/v2/status.json" },
 ];
 
 async function fetchProductStatus(name: string, url: string): Promise<AtlassianProductStatus> {
