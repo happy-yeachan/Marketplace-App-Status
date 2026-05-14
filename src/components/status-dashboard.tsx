@@ -540,12 +540,8 @@ export function StatusDashboard() {
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [refreshMs, setRefreshMsState] = useState<number>(5 * 60_000);
   const [atlassianStatus, setAtlassianStatus] = useState<{
-    indicator: "none" | "minor" | "major" | "critical";
-    description: string;
-    incidents: Array<{
-      id: string; name: string; status: string; impact: string;
-      shortlink: string; latestUpdate: string; components: string[];
-    }>;
+    overallIndicator: "none" | "minor" | "major" | "critical";
+    products: Array<{ name: string; indicator: "none" | "minor" | "major" | "critical"; description: string }>;
   } | null>(null);
 
   useEffect(() => {
@@ -1335,71 +1331,73 @@ export function StatusDashboard() {
           </div>
 
           {/* Atlassian Platform status */}
-          {atlassianStatus && (
-            <div className={cn(
-              "mb-4 rounded-lg border px-4 py-3",
-              atlassianStatus.indicator === "none"
-                ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20"
-                : atlassianStatus.indicator === "critical"
-                ? "border-red-200 bg-red-50/60 dark:border-red-900/40 dark:bg-red-950/20"
-                : "border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20",
-            )}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className={cn(
-                    "h-2 w-2 shrink-0 rounded-full",
-                    atlassianStatus.indicator === "none" ? "bg-emerald-500"
-                    : atlassianStatus.indicator === "critical" ? "bg-red-500"
-                    : "bg-amber-500",
-                  )} />
-                  <span className="text-sm font-medium">{t("atlassian.label")}</span>
-                  <span className={cn(
-                    "text-sm",
-                    atlassianStatus.indicator === "none" ? "text-emerald-700 dark:text-emerald-400"
-                    : atlassianStatus.indicator === "critical" ? "text-red-700 dark:text-red-400"
-                    : "text-amber-700 dark:text-amber-400",
-                  )}>
-                    — {atlassianStatus.description}
-                  </span>
+          {atlassianStatus && (() => {
+            const ind = atlassianStatus.overallIndicator;
+            const isOk = ind === "none";
+            const isCritical = ind === "critical";
+            const affectedProducts = atlassianStatus.products.filter((p) => p.indicator !== "none");
+            return (
+              <div className={cn(
+                "mb-4 rounded-lg border px-4 py-3",
+                isOk
+                  ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20"
+                  : isCritical
+                  ? "border-red-200 bg-red-50/60 dark:border-red-900/40 dark:bg-red-950/20"
+                  : "border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20",
+              )}>
+                {/* Header row */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={cn(
+                      "h-2 w-2 shrink-0 rounded-full",
+                      isOk ? "bg-emerald-500" : isCritical ? "bg-red-500" : "bg-amber-500",
+                    )} />
+                    <span className="text-sm font-medium">{t("atlassian.label")}</span>
+                    <span className={cn(
+                      "text-sm",
+                      isOk ? "text-emerald-700 dark:text-emerald-400"
+                      : isCritical ? "text-red-700 dark:text-red-400"
+                      : "text-amber-700 dark:text-amber-400",
+                    )}>
+                      {isOk ? "— All Systems Operational" : `— ${affectedProducts.length} service${affectedProducts.length > 1 ? "s" : ""} affected`}
+                    </span>
+                  </div>
+                  <a
+                    href="https://status.atlassian.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-xs text-muted-foreground hover:underline flex items-center gap-1"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    status.atlassian.com
+                  </a>
                 </div>
-                <a
-                  href="https://status.atlassian.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-xs text-muted-foreground hover:underline flex items-center gap-1"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  status.atlassian.com
-                </a>
-              </div>
-              {atlassianStatus.incidents.length > 0 && (
-                <div className="mt-2.5 space-y-2 border-t border-inherit pt-2.5">
-                  {atlassianStatus.incidents.map((inc) => (
-                    <div key={inc.id} className="text-xs">
-                      <a
-                        href={inc.shortlink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium hover:underline"
+
+                {/* Affected product pills */}
+                {affectedProducts.length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-inherit pt-2.5">
+                    {affectedProducts.map((p) => (
+                      <span
+                        key={p.name}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium",
+                          p.indicator === "critical"
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                        )}
                       >
-                        {inc.name}
-                      </a>
-                      {inc.components.length > 0 && (
-                        <span className="ml-1.5 text-muted-foreground">
-                          — {inc.components.join(", ")}
-                        </span>
-                      )}
-                      {inc.latestUpdate && (
-                        <p className="mt-0.5 text-muted-foreground line-clamp-2">
-                          {inc.latestUpdate}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                        <span className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          p.indicator === "critical" ? "bg-red-500" : "bg-amber-500",
+                        )} />
+                        {p.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Table or empty state */}
           {apps.length === 0 ? (

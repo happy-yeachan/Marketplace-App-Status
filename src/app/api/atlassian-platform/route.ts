@@ -2,71 +2,68 @@ import { NextResponse } from "next/server";
 
 export const runtime = "edge";
 
-interface AtlassianIncident {
-  id: string;
+export interface AtlassianProductStatus {
   name: string;
-  status: string;
-  impact: string;
-  shortlink: string;
-  incident_updates?: Array<{ body?: string }>;
-  components?: Array<{ name?: string }>;
-}
-
-interface AtlassianSummary {
-  status?: { indicator?: string; description?: string };
-  incidents?: AtlassianIncident[];
+  indicator: "none" | "minor" | "major" | "critical";
+  description: string;
 }
 
 export interface AtlassianPlatformStatus {
-  indicator: "none" | "minor" | "major" | "critical";
-  description: string;
-  incidents: Array<{
-    id: string;
-    name: string;
-    status: string;
-    impact: string;
-    shortlink: string;
-    latestUpdate: string;
-    components: string[];
-  }>;
+  overallIndicator: "none" | "minor" | "major" | "critical";
+  products: AtlassianProductStatus[];
+}
+
+const INDICATOR_RANK: Record<string, number> = {
+  none: 0, minor: 1, major: 2, critical: 3,
+};
+
+const PRODUCTS: Array<{ name: string; url: string }> = [
+  { name: "Jira",                    url: "https://jira-software.status.atlassian.com/api/v2/status.json" },
+  { name: "Jira Service Management", url: "https://jira-service-management.status.atlassian.com/api/v2/status.json" },
+  { name: "Jira Work Management",    url: "https://jira-work-management.status.atlassian.com/api/v2/status.json" },
+  { name: "Jira Product Discovery",  url: "https://jira-product-discovery.status.atlassian.com/api/v2/status.json" },
+  { name: "Confluence",              url: "https://confluence.status.atlassian.com/api/v2/status.json" },
+  { name: "Jira Align",              url: "https://jira-align.status.atlassian.com/api/v2/status.json" },
+  { name: "Bitbucket",               url: "https://status.bitbucket.org/api/v2/status.json" },
+  { name: "Trello",                  url: "https://www.trellostatus.com/api/v2/status.json" },
+  { name: "Opsgenie",                url: "https://status.opsgenie.com/api/v2/status.json" },
+  { name: "Compass",                 url: "https://compass.status.atlassian.com/api/v2/status.json" },
+  { name: "Atlas",                   url: "https://atlas.status.atlassian.com/api/v2/status.json" },
+  { name: "Rovo",                    url: "https://rovo.status.atlassian.com/api/v2/status.json" },
+  { name: "Loom",                    url: "https://loom.status.atlassian.com/api/v2/status.json" },
+  { name: "Focus",                   url: "https://focus.status.atlassian.com/api/v2/status.json" },
+];
+
+async function fetchProductStatus(name: string, url: string): Promise<AtlassianProductStatus> {
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(4000),
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { status?: { indicator?: string; description?: string } };
+    const indicator = (data.status?.indicator ?? "none") as AtlassianProductStatus["indicator"];
+    return { name, indicator, description: data.status?.description ?? "" };
+  } catch {
+    return { name, indicator: "none", description: "" };
+  }
 }
 
 export async function GET() {
-  try {
-    const res = await fetch("https://status.atlassian.com/api/v2/summary.json", {
-      headers: { Accept: "application/json" },
-      next: { revalidate: 120 },
-    });
+  const results = await Promise.all(
+    PRODUCTS.map(({ name, url }) => fetchProductStatus(name, url)),
+  );
 
-    if (!res.ok) {
-      return NextResponse.json({ error: "upstream error" }, { status: res.status });
-    }
+  const overallIndicator = results.reduce<AtlassianProductStatus["indicator"]>((worst, p) => {
+    return (INDICATOR_RANK[p.indicator] ?? 0) > (INDICATOR_RANK[worst] ?? 0) ? p.indicator : worst;
+  }, "none");
 
-    const data = (await res.json()) as AtlassianSummary;
-    const raw = data.status ?? {};
-    const indicator = (raw.indicator ?? "none") as AtlassianPlatformStatus["indicator"];
-    const description = raw.description ?? "All Systems Operational";
+  const payload: AtlassianPlatformStatus = { overallIndicator, products: results };
 
-    const activeIncidents = (data.incidents ?? [])
-      .filter((i) => i.status !== "resolved" && i.status !== "postmortem")
-      .map((i) => ({
-        id: i.id,
-        name: i.name,
-        status: i.status,
-        impact: i.impact,
-        shortlink: i.shortlink,
-        latestUpdate: i.incident_updates?.[0]?.body ?? "",
-        components: (i.components ?? []).map((c) => c.name ?? "").filter(Boolean),
-      }));
-
-    const payload: AtlassianPlatformStatus = { indicator, description, incidents: activeIncidents };
-
-    return NextResponse.json(payload, {
-      headers: {
-        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=240",
-      },
-    });
-  } catch {
-    return NextResponse.json({ error: "fetch failed" }, { status: 500 });
-  }
+  return NextResponse.json(payload, {
+    headers: {
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+    },
+  });
 }
