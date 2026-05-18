@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { AddAppDialog } from "@/components/add-app-dialog";
 import { AppLogo } from "@/components/app-logo";
-import { JiraImportDialog } from "@/components/jira-import-dialog";
 import { OnboardingDialog } from "@/components/onboarding-dialog";
 import { QuickSetupDialog } from "@/components/quick-setup-dialog";
 import { ShareImportDialog } from "@/components/share-import-dialog";
@@ -516,7 +515,6 @@ export function StatusDashboard() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [quickSetupOpen, setQuickSetupOpen] = useState(false);
-  const [jiraImportOpen, setJiraImportOpen] = useState(false);
   // Auto-open onboarding on first visit (no apps stored yet). Lazy initializer
   // reads localStorage so the dialog renders open immediately after hydration —
   // no setState-in-effect needed.
@@ -691,9 +689,7 @@ export function StatusDashboard() {
       if (
         typeof Notification !== "undefined" &&
         Notification.permission === "granted" &&
-        notifEnabled &&
-        typeof document !== "undefined" &&
-        document.hidden
+        notifEnabled
       ) {
         const body =
           to === "outage"
@@ -856,6 +852,24 @@ export function StatusDashboard() {
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted, refreshMs]);
+
+  // Seed popular apps on first visit (localStorage key absent = brand-new user)
+  useEffect(() => {
+    if (!isMounted) return;
+    if (localStorage.getItem(APPS_KEY) !== null) return; // returning user
+    fetch("/api/marketplace/popular")
+      .then((r) => r.json())
+      .then(({ apps: popular }: { apps: Array<{ id: string; appName: string; vendorName: string; checkType: import("@/types").CheckType; statusUrl: string; logoUrl?: string }> }) => {
+        const defaults = popular
+          .filter((a) => a.statusUrl !== "")
+          .slice(0, 6)
+          .map(({ id, appName, vendorName, checkType, statusUrl, logoUrl }) => ({
+            id, appName, vendorName, checkType, statusUrl, logoUrl,
+          }));
+        if (defaults.length > 0) setApps(defaults);
+      })
+      .catch(() => { /* ignore */ });
+  }, [isMounted]);
 
   // Fetch Atlassian platform status on mount and on auto-refresh interval
   useEffect(() => {
@@ -1186,16 +1200,6 @@ export function StatusDashboard() {
               }
             />
             <PopoverContent align="end" className="w-44 p-1">
-              {/* Import from Jira */}
-              <button
-                type="button"
-                onClick={() => setJiraImportOpen(true)}
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
-              >
-                <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                {t("header.jiraImport")}
-              </button>
-
               {/* Notifications */}
               {notifPerm !== "unsupported" && (
                 <button
@@ -1416,10 +1420,6 @@ export function StatusDashboard() {
                   <PlusCircle className="mr-1.5 h-4 w-4" />
                   {t("header.addApp")}
                 </Button>
-                <Button variant="outline" onClick={() => setJiraImportOpen(true)}>
-                  <Download className="mr-1.5 h-4 w-4" />
-                  {t("header.jiraImport")}
-                </Button>
               </div>
             </div>
           ) : (
@@ -1596,13 +1596,6 @@ export function StatusDashboard() {
               onClose={() => setShareImportApps(null)}
             />
           )}
-          <JiraImportDialog
-            open={jiraImportOpen}
-            onOpenChange={setJiraImportOpen}
-            onImport={handleBulkAddApps}
-            existingIds={existingIds}
-            existingNames={existingNames}
-          />
         </>
       )}
     </main>
