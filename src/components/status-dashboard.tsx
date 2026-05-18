@@ -76,6 +76,7 @@ const LATEST_KEY = "jira-marketplace-latest";
 const LAST_CHECKED_KEY = "jira-marketplace-last-checked";
 const NOTIF_ENABLED_KEY = "jira-marketplace-notifications";
 const REFRESH_INTERVAL_KEY = "jira-marketplace-refresh-interval";
+const SEEDED_KEY = "jira-marketplace-seeded";
 
 const REFRESH_OPTIONS = [
   { ms: 0,           label: "Off" },
@@ -853,10 +854,12 @@ export function StatusDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted, refreshMs]);
 
-  // Seed popular apps on first visit (localStorage key absent = brand-new user)
+  // Seed popular apps on first visit — use a dedicated flag so the APPS_KEY
+  // persistence effect (which writes "[]" immediately) doesn't block seeding.
   useEffect(() => {
     if (!isMounted) return;
-    if (localStorage.getItem(APPS_KEY) !== null) return; // returning user
+    if (localStorage.getItem(SEEDED_KEY) !== null) return;
+    localStorage.setItem(SEEDED_KEY, "1");
     fetch("/api/marketplace/popular")
       .then((r) => r.json())
       .then(({ apps: popular }: { apps: Array<{ id: string; appName: string; vendorName: string; checkType: import("@/types").CheckType; statusUrl: string; logoUrl?: string }> }) => {
