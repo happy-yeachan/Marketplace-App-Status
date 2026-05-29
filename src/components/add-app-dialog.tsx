@@ -85,6 +85,9 @@ export function AddAppDialog({
   const [results, setResults] = useState<MarketplaceSearchItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Custom URL entry state — set when user clicks a "No URL" item
   const [pendingItem, setPendingItem] = useState<MarketplaceSearchItem | null>(null);
@@ -96,6 +99,8 @@ export function AddAppDialog({
     setResults([]);
     setHasSearched(false);
     setIsSearching(false);
+    setOffset(0);
+    setHasMore(false);
     setPendingItem(null);
     setCustomUrl("");
   };
@@ -112,7 +117,7 @@ export function AddAppDialog({
     }
   }, [pendingItem]);
 
-  // Debounced search
+  // Debounced search — resets to page 0 on new query
   useEffect(() => {
     if (debouncedQuery.trim().length < 2) return;
 
@@ -120,14 +125,17 @@ export function AddAppDialog({
 
     const doSearch = async () => {
       setIsSearching(true);
+      setOffset(0);
+      setHasMore(false);
       try {
         const res = await fetch(
-          `/api/marketplace/search?query=${encodeURIComponent(debouncedQuery)}&limit=50`,
+          `/api/marketplace/search?query=${encodeURIComponent(debouncedQuery)}&limit=12&offset=0`,
           { signal: controller.signal },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as { items?: MarketplaceSearchItem[] };
+        const data = (await res.json()) as { items?: MarketplaceSearchItem[]; hasMore?: boolean };
         setResults(data.items ?? []);
+        setHasMore(data.hasMore ?? false);
       } catch (err) {
         if (!(err instanceof DOMException && err.name === "AbortError")) {
           setResults([]);
@@ -143,6 +151,25 @@ export function AddAppDialog({
     void doSearch();
     return () => controller.abort();
   }, [debouncedQuery]);
+
+  const loadMore = async () => {
+    const nextOffset = offset + 12;
+    setIsLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/marketplace/search?query=${encodeURIComponent(debouncedQuery)}&limit=12&offset=${nextOffset}`,
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { items?: MarketplaceSearchItem[]; hasMore?: boolean };
+      setResults((prev) => [...prev, ...(data.items ?? [])]);
+      setHasMore(data.hasMore ?? false);
+      setOffset(nextOffset);
+    } catch {
+      /* ignore */
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   const commitAdd = (item: MarketplaceSearchItem, overrideUrl?: string) => {
     const finalUrl = overrideUrl?.trim() ?? item.statusUrl;
@@ -373,6 +400,21 @@ export function AddAppDialog({
                       </CommandItem>
                     );
                   })}
+                  </div>
+                )}
+                {/* Load more */}
+                {hasMore && !isSearching && (
+                  <div className="p-2 pt-0">
+                    <button
+                      type="button"
+                      onClick={() => void loadMore()}
+                      disabled={isLoadingMore}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-md border py-2 text-xs text-muted-foreground hover:bg-muted/50 disabled:opacity-50"
+                    >
+                      {isLoadingMore
+                        ? <><Loader2 className="h-3 w-3 animate-spin" /> Loading…</>
+                        : "Show more results"}
+                    </button>
                   </div>
                 )}
               </CommandList>

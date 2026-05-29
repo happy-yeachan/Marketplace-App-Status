@@ -193,22 +193,24 @@ export async function GET(request: Request) {
 
   // Accept both `query` (our internal name) and `q` for backwards compat
   const text = (searchParams.get("query") ?? searchParams.get("q") ?? "").trim();
-  const limit = Math.min(Number(searchParams.get("limit") ?? "50"), 50);
+  const limit = Math.min(Number(searchParams.get("limit") ?? "12"), 50);
+  const offset = Math.max(0, Number(searchParams.get("offset") ?? "0"));
 
   if (text.length < 2 || text.length > 100) {
-    return NextResponse.json({ items: [] });
+    return NextResponse.json({ items: [], hasMore: false });
   }
 
   // Cache hit — skip Atlassian round-trip entirely
-  const cacheKey = `${text}:${limit}`;
+  const cacheKey = `${text}:${limit}:${offset}`;
   const cached = getCachedSearch(cacheKey);
   if (cached) {
-    return NextResponse.json({ items: cached, cached: true });
+    return NextResponse.json({ items: cached, hasMore: cached.length >= limit, cached: true });
   }
 
   const upstream = new URL(`${MARKETPLACE_BASE}/rest/2/addons`);
   upstream.searchParams.set("text", text);
   upstream.searchParams.set("limit", String(limit));
+  upstream.searchParams.set("offset", String(offset));
 
   try {
     const res = await fetch(upstream.toString(), {
@@ -244,7 +246,7 @@ export async function GET(request: Request) {
     ]);
 
     setCachedSearch(cacheKey, items);
-    return NextResponse.json({ items }, {
+    return NextResponse.json({ items, hasMore: items.length >= limit }, {
       headers: {
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
       },

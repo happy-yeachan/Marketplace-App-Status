@@ -23,7 +23,8 @@ const csp = [
   "img-src 'self' data: https:",
   "font-src 'self' fonts.gstatic.com",
   connectSrc,
-  "frame-ancestors 'none'",
+  // Allow embedding in Confluence (*.atlassian.net) and self
+  "frame-ancestors 'self' https://*.atlassian.net https://*.jira.com https://*.confluence.com",
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
@@ -31,7 +32,8 @@ const csp = [
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: csp },
-  { key: "X-Frame-Options", value: "DENY" },
+  // X-Frame-Options removed — CSP frame-ancestors above handles framing policy.
+  // X-Frame-Options doesn't support wildcards; keeping it would override CSP in some browsers.
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
