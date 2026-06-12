@@ -856,10 +856,13 @@ export function StatusDashboard() {
 
   // Seed popular apps on first visit — use a dedicated flag so the APPS_KEY
   // persistence effect (which writes "[]" immediately) doesn't block seeding.
+  // Skip seeding when the URL contains a share payload — the share import will
+  // populate the list instead, and we don't want default apps mixed in.
   useEffect(() => {
     if (!isMounted) return;
     if (localStorage.getItem(SEEDED_KEY) !== null) return;
     localStorage.setItem(SEEDED_KEY, "1");
+    if (window.location.hash.includes("#share=")) return;
     fetch("/api/marketplace/popular")
       .then((r) => r.json())
       .then(({ apps: popular }: { apps: Array<{ id: string; appName: string; vendorName: string; checkType: import("@/types").CheckType; statusUrl: string; logoUrl?: string }> }) => {
