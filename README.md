@@ -8,7 +8,7 @@ Real-time service health dashboard for Jira & Confluence third-party apps — no
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**[Live Demo](https://marketplace.yeachan.cloud)** · [Report an Issue](https://github.com/happy-yeachan/Marketplace-App-Status/issues) · [Sponsor](https://github.com/sponsors/happy-yeachan) · [한국어](./README.ko.md)
+**[Live Demo](https://marketplace.yeachan.cloud)** · [Report an Issue](https://github.com/happy-yeachan/Marketplace-App-Status/issues) · [한국어](./README.ko.md)
 
 ---
 
@@ -30,7 +30,9 @@ Atlassian's own services have a status page, but the hundreds of third-party Mar
 | Feature | Description |
 |---|---|
 | **Quick Setup** | One-click import of popular apps grouped by category. Status URLs auto-detected per vendor. |
-| **Marketplace Search** | Search any app by name. Status URL resolved server-side from a curated vendor map. |
+| **Marketplace Search** | Search any app by name with paginated results (12 per page). Status URL resolved server-side from a curated vendor map. |
+| **First-visit Defaults** | Six popular apps are pre-loaded on the first visit so the dashboard is immediately useful. Skipped when arriving via a share link. |
+| **Atlassian Platform Status** | Dedicated banner showing real-time health across 23 Atlassian products (Jira, Confluence, Bitbucket, Loom, Rovo, etc.), fetched from each product's individual Statuspage API in parallel. |
 | **Share via Link** | Generate a URL that encodes your app list. Recipients can import with one click — no server, no account needed. The payload is Base64URL-encoded in the `#share=` hash (never sent to the server). |
 | **Auto-discovery** | For vendors not in the static map, probes common patterns (`status.vendor.com`, `vendor.statuspage.io`, etc.) in parallel with page-name validation to prevent false positives. |
 | **Self-healing URLs** | When a vendor moves their status page, the dashboard detects the DNS failure, auto-discovers the new URL, retries the check, and silently persists the replacement. |
@@ -38,11 +40,12 @@ Atlassian's own services have a status page, but the hundreds of third-party Mar
 | **Per-app Component Matching** | On unified vendor pages (e.g. Adaptavist hosts ScriptRunner, Bitbucket Connector, etc. on one page), fuzzy-matches the specific app's component to avoid false positives from other apps' outages. |
 | **Heartbeat History** | Last 30 pings shown as colour-coded bars. Uptime % calculated per app. |
 | **Result Caching** | Status results are persisted to localStorage and shown immediately on remount. Initial scan is skipped if the last check was less than 90 seconds ago — avoids redundant API calls on quick navigation. |
-| **Auto-refresh** | Health checks run automatically every 5 minutes. |
-| **Status Change Toasts** | Instant notifications when an app transitions between Operational / Degraded / Outage. |
+| **Auto-refresh** | Health checks run automatically at a configurable interval: Off / 1m / 5m / 15m. Default is 5 minutes. |
+| **Status Change Notifications** | In-app toast when an app transitions between Operational / Degraded / Outage. Optionally enables browser notifications (via the Notifications permission) so you're alerted even when the tab is in the background. |
 | **i18n** | UI available in 5 languages: English, 日本語, Deutsch, 한국어, Français. Locale persisted to localStorage. Privacy page includes jurisdiction-specific legal sections (GDPR, PIPA, APPI) per locale. |
 | **Export** | Download your app list as JSON. |
 | **Dark Mode** | Theme toggle with localStorage persistence and anti-flicker inline script. |
+| **Confluence Embeddable** | Can be embedded as an iframe in Confluence Cloud pages (`*.atlassian.net`). CSP `frame-ancestors` is configured to allow this; `X-Frame-Options` is intentionally omitted (it doesn't support wildcards and overrides CSP in some browsers). |
 | **No database** | All user state stored in `localStorage`. Requires a Next.js host (Vercel) for the server-side API routes — no database or authentication infrastructure needed. |
 
 ---
@@ -73,6 +76,8 @@ src/
 │   └── api/
 │       ├── status/
 │       │   └── route.ts            # POST — health check engine (Statuspage, Instatus, Hund parsers, self-healing)
+│       ├── atlassian-platform/
+│       │   └── route.ts            # GET — Atlassian product health (23 products, parallel fetch)
 │       └── marketplace/
 │           ├── search/
 │           │   └── route.ts        # GET — Atlassian Marketplace search proxy + auto-discovery (Edge Runtime)
@@ -80,11 +85,12 @@ src/
 │               └── route.ts        # GET — curated popular apps list with 1-hour in-memory cache
 ├── components/
 │   ├── status-dashboard.tsx        # Main dashboard — state, table, toasts, share, dialogs
-│   ├── add-app-dialog.tsx          # Search-based single-app add flow
+│   ├── add-app-dialog.tsx          # Search-based single-app add flow (with pagination)
 │   ├── quick-setup-dialog.tsx      # Bulk-add popular apps with checkboxes by category
 │   ├── share-import-dialog.tsx     # Preview & confirm import from a share link
 │   ├── onboarding-dialog.tsx       # First-visit guide
 │   ├── app-logo.tsx                # Logo with fallback to first-letter initials
+│   ├── site-footer.tsx             # Footer with feedback and legal links
 │   ├── language-switcher.tsx       # Locale selector
 │   ├── theme-toggle.tsx            # Dark/light toggle
 │   └── ui/                         # shadcn/base-ui component shells
@@ -248,6 +254,8 @@ https://marketplace.yeachan.cloud/#share=eyJpIjoiY29tLm9ucmVzb2x2ZS5...
 
 **Importing:** on load, if a `#share=` hash is detected, a preview dialog lists the incoming apps. The user can confirm or cancel. Apps already in the dashboard (matched by Marketplace ID or app name) are excluded from the import to avoid duplicates. Imported apps trigger an immediate status check.
 
+**First-visit behaviour:** when a new user arrives via a share link, the default app seeding is skipped — the dashboard starts empty and populates only with the shared apps after the user confirms the import.
+
 **Quick Setup compatibility:** Marketplace app IDs are preserved in the share payload, so apps imported via share link are correctly detected as "already added" in the Quick Setup dialog.
 
 ---
@@ -337,11 +345,30 @@ The client persists the new URL to localStorage automatically.
 
 **Rate limit:** 600 apps per IP per 60-second window (in-memory, resets per serverless instance).
 
-### `GET /api/marketplace/search?query={text}&limit={n}`
+### `GET /api/atlassian-platform`
+
+Returns the real-time health of 23 Atlassian products in parallel. Each product is checked against its own individual Statuspage API (the unified `summary.json` is not used — it is known to lag during active incidents).
+
+**Response:**
+```json
+{
+  "overallIndicator": "none",
+  "products": [
+    { "name": "Jira", "indicator": "none", "description": "All Systems Operational" },
+    { "name": "Confluence", "indicator": "minor", "description": "Degraded Performance" }
+  ]
+}
+```
+
+`overallIndicator` is the worst individual product indicator. Cached for 60 seconds (`s-maxage=60, stale-while-revalidate=120`).
+
+### `GET /api/marketplace/search?query={text}&limit={n}&offset={n}`
 
 Proxy to the Atlassian Marketplace REST API v2. Runs on **Edge Runtime** for near-zero cold-start latency. Returns apps enriched with resolved status URLs. Runs auto-discovery for vendors not in the static map (capped at 12 unique vendors per query, 800 ms budget). Blacklisted vendors are excluded from discovery.
 
-Results are cached in-memory for 60 seconds (keyed by `query:limit`).
+Supports pagination via `offset` — the Add App dialog fetches 12 results per page with a "Show more" button appending the next page.
+
+Results are cached at the CDN layer for 60 seconds (`s-maxage=60, stale-while-revalidate=120`).
 
 > The Marketplace API uses `text=` (not `q=`) for full-text search. This proxy handles the parameter correctly and re-ranks results by text similarity before returning.
 
@@ -362,7 +389,8 @@ The following vendors are covered by the static map and will always resolve with
 | Atlassian | status.atlassian.com |
 | Appfire (+ SoftwarePlant, Bob Swift, Comalatech, …) | appfire-apps.statuspage.io |
 | Tempo Software (+ ALM Works, Old Street, Roadmunk, …) | status.tempo.io |
-| Adaptavist (+ OnResolve, Brikit, Meetical) | status.connect.adaptavist.com |
+| Adaptavist (+ OnResolve, Brikit) | status.connect.adaptavist.com |
+| Meetical | meetical.statuspage.io |
 | SmartBear (Zephyr family, BitBar, Cucumber) | per-product subdomains |
 | GitKraken (+ Axosoft) | gij.gitkrakenstatus.com |
 | Exalate (+ iDalko, iGo Software) | status.exalate.com |
@@ -489,6 +517,8 @@ Edit the `CURATED` array in `src/app/api/marketplace/popular/route.ts`:
 **Why a static vendor map instead of scraping?** Status page URLs rarely change. A curated map gives deterministic, tested results. Auto-discovery fills the gap for the long tail of vendors not yet in the map.
 
 **Why `summary.json` over `status.json`?** The Atlassian Statuspage `summary.json` endpoint includes the full component list, which is required for per-app component matching on unified vendor pages. `status.json` only returns the global indicator. The health check route upgrades any legacy `status.json` URLs transparently.
+
+**Why check individual Atlassian product pages instead of the unified summary?** During the major Atlassian outage in May 2026, the unified `https://status.atlassian.com/api/v2/summary.json` returned `indicator: "none"` while 20+ individual product pages were actively showing incidents. The unified API lags behind; individual product Statuspages are the authoritative source.
 
 **Why `#share=` hash for sharing?** The hash fragment is not sent to the server — the app list stays entirely client-side even when sharing. No file upload, no database write, no expiry. The trade-off is a longer URL, but for 10–30 apps the Base64URL payload is under 2 KB.
 
