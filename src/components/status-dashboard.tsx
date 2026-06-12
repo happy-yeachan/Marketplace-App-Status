@@ -508,7 +508,16 @@ export function StatusDashboard() {
     }
     return {};
   });
-  const [latestById, setLatestById] = useState<Record<string, HealthCheckResult>>({});
+  const [latestById, setLatestById] = useState<Record<string, HealthCheckResult>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(LATEST_KEY);
+      if (raw) return JSON.parse(raw) as Record<string, HealthCheckResult>;
+    } catch {
+      localStorage.removeItem(LATEST_KEY);
+    }
+    return {};
+  });
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
   const [isChecking, setIsChecking] = useState(false);
   const isCheckingRef = useRef(false);
@@ -610,16 +619,12 @@ export function StatusDashboard() {
     }
   }, [lastCheckedAt]);
 
-  // ── Restore cached results after hydration ─────────────────────────────────
-  // latestById and lastCheckedAt are intentionally NOT set via lazy initializer
-  // to avoid a server/client hydration mismatch. Instead we load them here,
-  // after React has finished hydrating, so both renders start from the same
-  // empty state and the cache is applied in a single post-hydration commit.
+  // ── Restore lastCheckedAt after hydration ──────────────────────────────────
+  // lastCheckedAt is a Date object derived from an ISO string — keeping it out
+  // of the lazy initializer avoids a Date serialization mismatch on hydration.
+  // latestById uses a lazy initializer (same as historyById) so it is already
+  // populated before the persist effect fires, preventing the overwrite race.
   useEffect(() => {
-    try {
-      const rawLatest = localStorage.getItem(LATEST_KEY);
-      if (rawLatest) setLatestById(JSON.parse(rawLatest) as Record<string, HealthCheckResult>);
-    } catch { /* ignore corrupt cache */ }
     try {
       const rawTs = localStorage.getItem(LAST_CHECKED_KEY);
       if (rawTs) setLastCheckedAt(new Date(rawTs));
