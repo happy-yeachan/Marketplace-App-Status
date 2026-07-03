@@ -1,13 +1,9 @@
 name: CI
 
-# Typecheck + unit tests + production build on every push/PR to main.
+# Lint + typecheck + unit tests + production build on every push/PR to main.
 # The unit tests cover the status-payload parsers (src/lib/status-extract.ts,
 # with real vendor payload fixtures), the share-link codec, and the SSRF guard
 # — the three modules where regressions are silent and user-facing.
-#
-# Note: `npm run lint` is NOT part of CI yet — the react-hooks plugin flags
-# several pre-existing patterns (ref-mutation-in-effect etc.) that need a
-# dedicated cleanup pass first.
 
 on:
   push:
@@ -32,6 +28,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint
+        run: npm run lint
 
       - name: Typecheck
         run: npx tsc --noEmit

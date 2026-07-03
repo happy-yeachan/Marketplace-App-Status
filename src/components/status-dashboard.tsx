@@ -16,7 +16,6 @@ import {
   History,
   ExternalLink,
   HelpCircle,
-  Languages,
   LayoutGrid,
   Link2,
   Loader2,
@@ -86,7 +85,6 @@ const REFRESH_OPTIONS = [
   { ms: 15 * 60_000, label: "15m" },
 ] as const;
 const HISTORY_MAX = 30;
-const AUTO_REFRESH_MS = 5 * 60 * 1000;
 const RECHECK_COOLDOWN_MS = 90_000; // skip initial scan if last check was < 90 s ago
 const BAR_COUNT = 30;
 const STATUS_BATCH_SIZE = 50; // must match MAX_APPS_PER_REQUEST on the server
@@ -623,34 +621,43 @@ export function StatusDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<RegisteredApp | null>(null);
   const [toasts, setToasts] = useState<StatusToast[]>([]);
   const [notices, setNotices] = useState<{ id: string; message: string; variant?: "success" | "error" }[]>([]);
-  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
+  // Lazy-restored from localStorage; its render usage is isMounted-gated so
+  // the server (null) vs client (Date) difference never causes a mismatch.
+  const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem(LAST_CHECKED_KEY);
+      return raw ? new Date(raw) : null;
+    } catch {
+      return null;
+    }
+  });
   const [shareImportApps, setShareImportApps] = useState<RegisteredApp[] | null>(null);
-  const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">("default");
-  const [notifEnabled, setNotifEnabled] = useState(false);
-  const [refreshMs, setRefreshMsState] = useState<number>(5 * 60_000);
+  // Browser-only values use lazy initializers (not post-mount effects): the
+  // values they influence render inside popovers/`isMounted` gates, so the
+  // SSR-vs-client difference never reaches hydrated DOM.
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">(() =>
+    typeof window === "undefined" || typeof Notification === "undefined"
+      ? "unsupported"
+      : Notification.permission,
+  );
+  const [notifEnabled, setNotifEnabled] = useState(() => {
+    if (typeof window === "undefined" || typeof Notification === "undefined") return false;
+    return Notification.permission === "granted" && localStorage.getItem(NOTIF_ENABLED_KEY) !== "false";
+  });
+  const [refreshMs, setRefreshMsState] = useState<number>(() => {
+    if (typeof window === "undefined") return 5 * 60_000;
+    const stored = localStorage.getItem(REFRESH_INTERVAL_KEY);
+    if (stored !== null) {
+      const parsed = Number(stored);
+      if (REFRESH_OPTIONS.some((o) => o.ms === parsed)) return parsed;
+    }
+    return 5 * 60_000;
+  });
   const [atlassianStatus, setAtlassianStatus] = useState<{
     overallIndicator: "none" | "minor" | "major" | "critical";
     products: Array<{ name: string; indicator: "none" | "minor" | "major" | "critical"; description: string }>;
   } | null>(null);
-
-  useEffect(() => {
-    if (typeof Notification === "undefined") {
-      setNotifPerm("unsupported");
-    } else {
-      setNotifPerm(Notification.permission);
-      if (Notification.permission === "granted") {
-        setNotifEnabled(localStorage.getItem(NOTIF_ENABLED_KEY) !== "false");
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(REFRESH_INTERVAL_KEY);
-    if (stored !== null) {
-      const parsed = Number(stored);
-      if (REFRESH_OPTIONS.some((o) => o.ms === parsed)) setRefreshMsState(parsed);
-    }
-  }, []);
 
   const setRefreshMs = useCallback((ms: number) => {
     setRefreshMsState(ms);
@@ -700,19 +707,6 @@ export function StatusDashboard() {
     }
   }, [lastCheckedAt]);
 
-  // ── Restore lastCheckedAt after hydration ──────────────────────────────────
-  // lastCheckedAt is a Date object derived from an ISO string — keeping it out
-  // of the lazy initializer avoids a Date serialization mismatch on hydration.
-  // latestById uses a lazy initializer (same as historyById) so it is already
-  // populated before the persist effect fires, preventing the overwrite race.
-  useEffect(() => {
-    try {
-      const rawTs = localStorage.getItem(LAST_CHECKED_KEY);
-      if (rawTs) setLastCheckedAt(new Date(rawTs));
-    } catch { /* ignore */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once after mount — deps intentionally empty
-
   const addNotice = useCallback((message: string, variant: "success" | "error" = "success") => {
     const id = crypto.randomUUID();
     setNotices((prev) => [...prev, { id, message, variant }]);
@@ -747,40 +741,6 @@ export function StatusDashboard() {
     );
   }, [apps, t, addNotice]);
 
-  const handleShareImport = useCallback((incoming: RegisteredApp[]) => {
-    // Defang URLs that fail the SSRF guard — a malicious link can hide an
-    // arbitrary target behind a familiar app name. The app is still imported,
-    // just without monitoring.
-    const sanitized = incoming.map((a) =>
-      a.statusUrl && !guardOutboundUrl(a.statusUrl).ok
-        ? { ...a, statusUrl: "", checkType: "custom" as const }
-        : a,
-    );
-    const existingNames = new Set(appsRef.current.map((a) => a.appName.toLowerCase()));
-    const fresh = sanitized.filter((a) => !existingNames.has(a.appName.toLowerCase()));
-    const skipped = incoming.length - fresh.length;
-    const message =
-      skipped > 0
-        ? t("share.importDuplicate", { added: fresh.length, skipped })
-        : t("share.importSuccess", { count: fresh.length });
-
-    setApps((prev) => [...prev, ...fresh]);
-    addNotice(message);
-    setShareImportApps(null);
-
-    // Auto-check imported apps (same pattern as handleBulkAddApps)
-    const checkable = fresh.filter((a) => a.statusUrl);
-    if (checkable.length === 0) return;
-    const ids = checkable.map((a) => a.id);
-    setAddingIds((prev) => new Set([...prev, ...ids]));
-    void fetchStatusBatched(checkable)
-      .then((data) => { if (data?.results) applyResultsRef.current(data.results, latestByIdRef.current); })
-      .catch(() => undefined)
-      .finally(() => {
-        setAddingIds((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
-      });
-  }, [t, addNotice]);
-
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
@@ -811,7 +771,15 @@ export function StatusDashboard() {
   );
 
   // ── Health checks ──────────────────────────────────────────────────────────
-  const applyResults = useCallback((results: HealthCheckResult[], prevById: Record<string, HealthCheckResult>) => {
+
+  // Write-through companion to `latestById`: updated synchronously at every
+  // place the state is set, so async callbacks always read the freshest
+  // snapshot. Replaces the old state→ref mirroring effect.
+  const latestByIdRef = useRef(latestById);
+
+  const applyResults = useCallback((results: HealthCheckResult[]) => {
+    const prevById = latestByIdRef.current;
+
     // Detect status degradations → show toast
     for (const r of results) {
       const prev = prevById[r.appId];
@@ -837,10 +805,12 @@ export function StatusDashboard() {
       );
     }
 
-    setLatestById((prev) => ({
-      ...prev,
+    const nextLatest = {
+      ...prevById,
       ...Object.fromEntries(results.map((r) => [r.appId, r])),
-    }));
+    };
+    latestByIdRef.current = nextLatest;
+    setLatestById(nextLatest);
     setHistoryById((prev) => {
       const next = { ...prev };
       for (const r of results) {
@@ -856,8 +826,39 @@ export function StatusDashboard() {
     });
   }, [addToast]);
 
-  const latestByIdRef = useRef<Record<string, HealthCheckResult>>({});
-  useEffect(() => { latestByIdRef.current = latestById; }, [latestById]);
+  const handleShareImport = useCallback((incoming: RegisteredApp[]) => {
+    // Defang URLs that fail the SSRF guard — a malicious link can hide an
+    // arbitrary target behind a familiar app name. The app is still imported,
+    // just without monitoring.
+    const sanitized = incoming.map((a) =>
+      a.statusUrl && !guardOutboundUrl(a.statusUrl).ok
+        ? { ...a, statusUrl: "", checkType: "custom" as const }
+        : a,
+    );
+    const existingNames = new Set(appsRef.current.map((a) => a.appName.toLowerCase()));
+    const fresh = sanitized.filter((a) => !existingNames.has(a.appName.toLowerCase()));
+    const skipped = incoming.length - fresh.length;
+    const message =
+      skipped > 0
+        ? t("share.importDuplicate", { added: fresh.length, skipped })
+        : t("share.importSuccess", { count: fresh.length });
+
+    setApps((prev) => [...prev, ...fresh]);
+    addNotice(message);
+    setShareImportApps(null);
+
+    // Auto-check imported apps (same pattern as handleBulkAddApps)
+    const checkable = fresh.filter((a) => a.statusUrl);
+    if (checkable.length === 0) return;
+    const ids = checkable.map((a) => a.id);
+    setAddingIds((prev) => new Set([...prev, ...ids]));
+    void fetchStatusBatched(checkable)
+      .then((data) => { if (data?.results) applyResults(data.results); })
+      .catch(() => undefined)
+      .finally(() => {
+        setAddingIds((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
+      });
+  }, [t, addNotice, applyResults]);
 
   // Update browser tab title to reflect issue count
   useEffect(() => {
@@ -869,10 +870,6 @@ export function StatusDashboard() {
       : "Marketplace App Status";
   }, [latestById]);
 
-  // Stable ref so callbacks declared before applyResults can call it
-  const applyResultsRef = useRef(applyResults);
-  useEffect(() => { applyResultsRef.current = applyResults; }, [applyResults]);
-
   const checkAllStatuses = async () => {
     if (isCheckingRef.current) return;
     const appsList = appsRef.current;
@@ -883,27 +880,31 @@ export function StatusDashboard() {
     try {
       const data = await fetchStatusBatched(checkableApps);
       if (!data) throw new Error("All batches failed");
-      applyResults(data.results, latestByIdRef.current);
+      applyResults(data.results);
       setLastCheckedAt(new Date());
     } catch {
-      setLatestById((prev) => {
-        const next = { ...prev };
-        for (const app of checkableApps) {
-          // Only mark as outage if the app had a previous result.
-          // Brand-new apps (no prior result) stay unknown — avoids false outages
-          // on first add when the check request fails (e.g. cold start / timeout).
-          if (prev[app.id] && !addingIds.has(app.id)) {
-            next[app.id] = {
-              ...prev[app.id],
-              status: "outage",
-              checkedAt: new Date().toISOString(),
-              responseTimeMs: null,
-              message: "Health check request failed",
-            };
-          }
+      const prev = latestByIdRef.current;
+      const next = { ...prev };
+      let changed = false;
+      for (const app of checkableApps) {
+        // Only mark as outage if the app had a previous result.
+        // Brand-new apps (no prior result) stay unknown — avoids false outages
+        // on first add when the check request fails (e.g. cold start / timeout).
+        if (prev[app.id] && !addingIds.has(app.id)) {
+          changed = true;
+          next[app.id] = {
+            ...prev[app.id],
+            status: "outage",
+            checkedAt: new Date().toISOString(),
+            responseTimeMs: null,
+            message: "Health check request failed",
+          };
         }
-        return next;
-      });
+      }
+      if (changed) {
+        latestByIdRef.current = next;
+        setLatestById(next);
+      }
     } finally {
       isCheckingRef.current = false;
       setIsChecking(false);
@@ -937,15 +938,18 @@ export function StatusDashboard() {
 
   // Initial health check fires after mount, but is skipped if a check ran
   // recently (e.g. user navigated away and back quickly). Cached results from
-  // localStorage are shown immediately while the user waits.
-  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  // localStorage are shown immediately while the user waits. The check is
+  // deferred a microtask so the spinner setState never lands inside the
+  // effect's synchronous phase (no cascading render).
   useEffect(() => {
     if (!isMounted) return;
     try {
       const raw = localStorage.getItem(LAST_CHECKED_KEY);
       if (raw && Date.now() - new Date(raw).getTime() < RECHECK_COOLDOWN_MS) return;
     } catch { /* ignore */ }
-    void checkAllStatuses();
+    void Promise.resolve().then(checkAllStatuses);
+    // checkAllStatuses reads everything through refs — intentionally not a dep.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted]);
 
   // (Onboarding auto-open is handled by the lazy initializer of `onboardingOpen`
@@ -1008,7 +1012,7 @@ export function StatusDashboard() {
         void fetchStatusBatched(defaults)
           .then((data) => {
             if (data?.results) {
-              applyResultsRef.current(data.results, latestByIdRef.current);
+              applyResults(data.results);
               setLastCheckedAt(new Date());
             }
           })
@@ -1018,7 +1022,9 @@ export function StatusDashboard() {
           });
       })
       .catch(() => { /* ignore */ });
-  }, [isMounted]);
+    // Re-runs when applyResults' identity changes are no-ops: the SEEDED_KEY
+    // guard above bails out immediately.
+  }, [isMounted, applyResults]);
 
   // Fetch Atlassian platform status on mount and on auto-refresh interval
   useEffect(() => {
@@ -1060,13 +1066,13 @@ export function StatusDashboard() {
       .then((data) => {
         const result = data?.results?.[0];
         if (result) {
-          applyResults(data!.results, latestByIdRef.current);
+          applyResults(data!.results);
           // Cold-start may produce a false outage/degraded — silently recheck
           // after 10 s without showing a spinner.
           if (result.status === "outage" || result.status === "degraded") {
             setTimeout(() => {
               void doCheck().then((retryData) => {
-                if (retryData?.results?.[0]) applyResults(retryData.results, latestByIdRef.current);
+                if (retryData?.results?.[0]) applyResults(retryData.results);
               });
             }, 10_000);
           }
@@ -1096,7 +1102,7 @@ export function StatusDashboard() {
       const ids = checkableApps.map((a) => a.id);
       setAddingIds((prev) => new Set([...prev, ...ids]));
       void fetchStatusBatched(checkableApps)
-        .then((data) => { if (data?.results) applyResults(data.results, latestByIdRef.current); })
+        .then((data) => { if (data?.results) applyResults(data.results); })
         .catch(() => undefined)
         .finally(() => {
           setAddingIds((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
@@ -1106,7 +1112,10 @@ export function StatusDashboard() {
 
   const handleDeleteApp = useCallback((appId: string) => {
     setApps((prev) => prev.filter((a) => a.id !== appId));
-    setLatestById((prev) => { const n = { ...prev }; delete n[appId]; return n; });
+    const nextLatest = { ...latestByIdRef.current };
+    delete nextLatest[appId];
+    latestByIdRef.current = nextLatest;
+    setLatestById(nextLatest);
     setHistoryById((prev) => { const n = { ...prev }; delete n[appId]; return n; });
   }, []);
 
@@ -1255,6 +1264,11 @@ export function StatusDashboard() {
     };
   }, [apps, latestById, sortKey, sortDir]);
 
+  // The stored refresh interval is lazy-loaded on the client, but the label
+  // renders in SSR HTML too — show the default until hydration completes so
+  // server and first client paint stay identical.
+  const displayRefreshMs = isMounted ? refreshMs : 5 * 60_000;
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-8">
@@ -1314,7 +1328,7 @@ export function StatusDashboard() {
           </h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {t("header.subtitle")}
-            {lastCheckedAt && (
+            {isMounted && lastCheckedAt && (
               <span className="ml-2 text-xs">
                 · {t("header.lastChecked", { time: lastCheckedAt.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }) })}
               </span>
@@ -1345,7 +1359,7 @@ export function StatusDashboard() {
                     size="sm"
                     className="rounded-l-none border-0 gap-1 px-2 text-xs text-muted-foreground"
                   >
-                    {refreshMs === 0 ? t("autoRefresh.off") : REFRESH_OPTIONS.find((o) => o.ms === refreshMs)?.label ?? "5m"}
+                    {displayRefreshMs === 0 ? t("autoRefresh.off") : REFRESH_OPTIONS.find((o) => o.ms === displayRefreshMs)?.label ?? "5m"}
                     <ChevronDown className="h-3 w-3" />
                   </Button>
                 }
