@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   probe:
@@ -35,4 +36,39 @@ jobs:
           node-version: "22"
 
       - name: Probe every URL in PRODUCT_RULES + VENDOR_STATUS_MAP
-        run: node --experimental-strip-types scripts/audit-static-urls.ts
+        shell: bash
+        # pipefail so `tee` doesn't swallow the audit script's exit code
+        run: |
+          set -o pipefail
+          node --experimental-strip-types scripts/audit-static-urls.ts 2>&1 | tee audit.log
+
+      # A failed scheduled run otherwise dies silently — nobody reads the
+      # Actions tab. File (or bump) an issue so the rot is visible.
+      - name: File an issue for dead URLs
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create url-audit --color D93F0B --description "Dead vendor status URL detected by the weekly audit" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+
+          BODY_FILE=$(mktemp)
+          {
+            echo "The weekly URL liveness audit found dead vendor status URLs."
+            echo ""
+            echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo ""
+            echo '```'
+            # everything from the "Dead URLs:" marker onward; fall back to full log tail
+            sed -n '/^Dead URLs:/,$p' audit.log | head -80
+            echo '```'
+          } > "$BODY_FILE"
+
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label url-audit --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body-file "$BODY_FILE"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "Weekly URL audit: dead vendor status URLs detected" \
+              --label url-audit \
+              --body-file "$BODY_FILE"
+          fi

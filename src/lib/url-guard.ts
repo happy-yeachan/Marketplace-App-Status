@@ -48,15 +48,25 @@ function isPrivateIpv4(host: string): boolean {
 }
 
 function isPrivateIpv6(host: string): boolean {
-  // Bracketed IPv6 from URL parsing is already stripped of brackets in URL.hostname.
+  // NOTE: WHATWG URL keeps the brackets in URL.hostname ("[::1]"), so callers
+  // must strip them first — see guardOutboundUrl below.
   const h = host.toLowerCase();
   if (h === "::1" || h === "::") return true;       // loopback / unspecified
   if (h.startsWith("fe80:") || h.startsWith("fe80::")) return true; // link-local
   if (h.startsWith("fc") || h.startsWith("fd")) return true;        // unique-local fc00::/7
   if (h.startsWith("ff")) return true;              // multicast ff00::/8
-  // ::ffff:a.b.c.d — IPv4-mapped — recurse into IPv4 logic
+  // ::ffff:a.b.c.d — IPv4-mapped, dotted form (raw strings that skipped URL parsing)
   const mapped = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
   if (mapped && isPrivateIpv4(mapped[1])) return true;
+  // ::ffff:7f00:1 — IPv4-mapped, hex form. WHATWG URL normalises the dotted
+  // form to this, so post-parse hostnames ONLY ever appear like this.
+  const hexMapped = h.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hexMapped) {
+    const hi = parseInt(hexMapped[1], 16);
+    const lo = parseInt(hexMapped[2], 16);
+    const dotted = `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`;
+    if (isPrivateIpv4(dotted)) return true;
+  }
   return false;
 }
 
@@ -91,7 +101,12 @@ export function guardOutboundUrl(input: string): UrlGuardResult {
   if (isPrivateIpv4(host)) {
     return { ok: false, reason: "URL points to a private IPv4 address." };
   }
-  if (host.includes(":") && isPrivateIpv6(host)) {
+  // WHATWG URL.hostname keeps the brackets on IPv6 literals ("[::1]") —
+  // strip them or every IPv6 comparison silently never matches.
+  const bareHost = host.startsWith("[") && host.endsWith("]")
+    ? host.slice(1, -1)
+    : host;
+  if (bareHost.includes(":") && isPrivateIpv6(bareHost)) {
     return { ok: false, reason: "URL points to a private IPv6 address." };
   }
 

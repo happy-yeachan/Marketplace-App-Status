@@ -102,8 +102,11 @@ async function inflate(bytes: Uint8Array): Promise<string> {
   const writer = ds.writable.getWriter();
   // Wrap in a fresh Uint8Array to guarantee ArrayBuffer (not SharedArrayBuffer),
   // which is what WritableStreamDefaultWriter.write() requires.
-  writer.write(new Uint8Array(bytes));
-  writer.close();
+  // Corrupt/truncated input rejects these write promises — swallow them here;
+  // the reader loop below surfaces the real error to the caller. Without the
+  // .catch() a truncated share link triggers an unhandled rejection.
+  writer.write(new Uint8Array(bytes)).catch(() => {});
+  writer.close().catch(() => {});
   const chunks: Uint8Array[] = [];
   const reader = ds.readable.getReader();
   for (;;) {
