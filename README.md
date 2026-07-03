@@ -33,7 +33,7 @@ Atlassian's own services have a status page, but the hundreds of third-party Mar
 | **Marketplace Search** | Search any app by name with paginated results (12 per page). Status URL resolved server-side from a curated vendor map. |
 | **First-visit Defaults** | Six popular apps are pre-loaded on the first visit so the dashboard is immediately useful. Skipped when arriving via a share link. |
 | **Atlassian Platform Status** | Dedicated banner showing real-time health across 23 Atlassian products (Jira, Confluence, Bitbucket, Loom, Rovo, etc.), fetched from each product's individual Statuspage API in parallel. |
-| **Share via Link** | Generate a URL that encodes your app list. Recipients can import with one click — no server, no account needed. The payload is Base64URL-encoded in the `#share=` hash (never sent to the server). |
+| **Share via Link** | Generate a URL that encodes your app list. Recipients can import with one click — no server, no account needed. The payload is deflate-compressed and Base64URL-encoded in the `#share=` hash (never sent to the server); legacy uncompressed links are auto-detected. |
 | **Auto-discovery** | For vendors not in the static map, probes common patterns (`status.vendor.com`, `vendor.statuspage.io`, etc.) in parallel with page-name validation to prevent false positives. |
 | **Self-healing URLs** | When a vendor moves their status page, the dashboard detects the DNS failure, auto-discovers the new URL, retries the check, and silently persists the replacement. |
 | **Live Health Checks** | Calls vendor status APIs from the Next.js server (avoids CORS). Supports Atlassian Statuspage, Instatus, and Hund.io formats. |
@@ -43,7 +43,7 @@ Atlassian's own services have a status page, but the hundreds of third-party Mar
 | **Auto-refresh** | Health checks run automatically at a configurable interval: Off / 1m / 5m / 15m. Default is 5 minutes. |
 | **Status Change Notifications** | In-app toast when an app transitions between Operational / Degraded / Outage. Optionally enables browser notifications (via the Notifications permission) so you're alerted even when the tab is in the background. |
 | **i18n** | UI available in 5 languages: English, 日本語, Deutsch, 한국어, Français. Locale persisted to localStorage. Privacy page includes jurisdiction-specific legal sections (GDPR, PIPA, APPI) per locale. |
-| **Export** | Download your app list as JSON. |
+| **Export / Import** | Download your app list as JSON, and restore it later from the same file (Import re-validates every entry and passes status URLs through the SSRF guard). |
 | **Dark Mode** | Theme toggle with localStorage persistence and anti-flicker inline script. |
 | **Confluence Embeddable** | Can be embedded as an iframe in Confluence Cloud pages (`*.atlassian.net`). CSP `frame-ancestors` is configured to allow this; `X-Frame-Options` is intentionally omitted (it doesn't support wildcards and overrides CSP in some browsers). |
 | **No database** | All user state stored in `localStorage`. Requires a Next.js host (Vercel) for the server-side API routes — no database or authentication infrastructure needed. |
@@ -95,7 +95,7 @@ src/
 │   ├── theme-toggle.tsx            # Dark/light toggle
 │   └── ui/                         # shadcn/base-ui component shells
 ├── lib/
-│   ├── share.ts                    # Base64URL encode/decode for share link payload
+│   ├── share.ts                    # Share payload codec (deflate-raw + Base64URL, legacy auto-detect)
 │   ├── status-discovery.ts         # Auto-discovery probe engine + vendor name normaliser
 │   ├── url-guard.ts                # SSRF guard for outbound URLs
 │   ├── utils.ts                    # cn() Tailwind class merger
@@ -247,12 +247,12 @@ Only a non-zero score component is selected. If no component matches, the global
 The share feature encodes your entire app list into a URL hash — no server storage involved.
 
 ```
-https://marketplace.yeachan.cloud/#share=eyJpIjoiY29tLm9ucmVzb2x2ZS5...
+https://marketplace.yeachan.cloud/#share=z:jVNNb9swDP0rgs5x4TjK...
 ```
 
-**Encoding:** each app is minimised to 5 fields (`i`/`n`/`v`/`u`/`t` + optional `l` for logo), JSON-serialised, UTF-8 percent-encoded, then Base64URL-encoded (URL-safe, no padding). The hash fragment is never sent to the server.
+**Encoding (v3, current):** each app is minimised to a compact tuple `[id, appName, vendorName, compressedStatusUrl, checkTypeChar, logoAssetId?]` (common status-URL suffixes like `/api/v2/status.json` are replaced by 2-char codes, the logo URL is reduced to its CDN asset ID). The tuple array is JSON-serialised, deflate-raw-compressed, Base64URL-encoded, and prefixed with `z:`. Legacy formats — v2 (`z:` + compressed JSON objects) and v1 (plain Base64URL JSON) — are auto-detected on decode. The hash fragment is never sent to the server.
 
-**Importing:** on load, if a `#share=` hash is detected, a preview dialog lists the incoming apps. The user can confirm or cancel. Apps already in the dashboard (matched by Marketplace ID or app name) are excluded from the import to avoid duplicates. Imported apps trigger an immediate status check.
+**Importing:** if a `#share=` hash is detected (on load or via `hashchange` in an already-open tab), a preview dialog lists the incoming apps — including each app's status-URL domain, so recipients can spot unexpected targets — and marks apps already on the dashboard. Corrupted/truncated payloads show an error toast. On confirm, apps already in the dashboard (matched by app name) are skipped, status URLs failing the SSRF guard are stripped, and the imported apps trigger an immediate status check.
 
 **First-visit behaviour:** when a new user arrives via a share link, the default app seeding is skipped — the dashboard starts empty and populates only with the shared apps after the user confirms the import.
 
@@ -520,7 +520,7 @@ Edit the `CURATED` array in `src/app/api/marketplace/popular/route.ts`:
 
 **Why check individual Atlassian product pages instead of the unified summary?** During the major Atlassian outage in May 2026, the unified `https://status.atlassian.com/api/v2/summary.json` returned `indicator: "none"` while 20+ individual product pages were actively showing incidents. The unified API lags behind; individual product Statuspages are the authoritative source.
 
-**Why `#share=` hash for sharing?** The hash fragment is not sent to the server — the app list stays entirely client-side even when sharing. No file upload, no database write, no expiry. The trade-off is a longer URL, but for 10–30 apps the Base64URL payload is under 2 KB.
+**Why `#share=` hash for sharing?** The hash fragment is not sent to the server — the app list stays entirely client-side even when sharing. No file upload, no database write, no expiry. The trade-off is a longer URL, but with tuple minimisation + deflate compression the payload stays well under 2 KB even for 30 apps.
 
 **Why not import from Jira directly?** Jira's UPM REST API only returns apps installed via the traditional P2 (server/DC) plugin system. Forge apps (the modern cloud platform) — which includes ScriptRunner Cloud and many newer apps — are invisible to UPM. Since this would silently miss a large fraction of cloud-hosted apps, the import flow was replaced with the Quick Setup curated list and Marketplace search, both of which use the public Marketplace API.
 

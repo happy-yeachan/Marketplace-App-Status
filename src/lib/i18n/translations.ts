@@ -22,6 +22,7 @@ const en: Translations = {
   "header.disclaimer": "Independent project — not affiliated with Atlassian.",
   "header.refresh": "Refresh",
   "header.exportTooltip": "Export app list",
+  "header.importTooltip": "Import app list (JSON)",
   "header.quickSetup": "Quick Setup",
   "header.addApp": "Add App",
   "header.howToUse": "How to use",
@@ -31,6 +32,13 @@ const en: Translations = {
   "status.degraded": "Degraded",
   "status.outage": "Outage",
   "status.monitored": "{n} monitored",
+
+  // Vendor raw component statuses (Statuspage / Instatus tokens)
+  "rawStatus.operational": "Operational",
+  "rawStatus.degradedperformance": "Degraded performance",
+  "rawStatus.partialoutage": "Partial outage",
+  "rawStatus.majoroutage": "Major outage",
+  "rawStatus.undermaintenance": "Under maintenance",
 
   // Empty state
   "empty.title": "No apps monitored",
@@ -44,6 +52,7 @@ const en: Translations = {
   "table.response": "Response",
   "table.checked": "Checked",
   "table.noStatusPage": "No status page",
+  "history.noData": "No data",
 
   // Onboarding dialog
   "onboarding.title": "Welcome to the Status Dashboard",
@@ -65,6 +74,7 @@ const en: Translations = {
   "addApp.placeholder": "Type app name (e.g. draw.io, Zephyr, Tempo…)",
   "addApp.hint": "Type at least 2 characters to search the Marketplace.",
   "addApp.empty": "No apps found for “{q}”.",
+  "addApp.emptyHint": "Tip: Marketplace listings are in English — try the app's English name.",
   "addApp.autoBadge": "Auto",
   "addApp.noUrlBadge": "No URL",
   "addApp.urlLabel": "Status page URL",
@@ -107,6 +117,9 @@ const en: Translations = {
   "share.importButton": "Import",
   "share.importSuccess": "{count} apps imported.",
   "share.importDuplicate": "{added} apps imported, {skipped} already in your list.",
+  "share.invalid": "Invalid or corrupted share link.",
+  "share.blockedUrl": "Blocked URL",
+  "import.fileInvalid": "Invalid backup file.",
 
   // Jira import
   "header.jiraImport": "Import from Jira",
@@ -206,6 +219,7 @@ const ja: Translations = {
   "header.disclaimer": "独立プロジェクトです — Atlassian とは無関係です。",
   "header.refresh": "更新",
   "header.exportTooltip": "アプリ一覧をエクスポート",
+  "header.importTooltip": "アプリ一覧をインポート (JSON)",
   "header.quickSetup": "クイック設定",
   "header.addApp": "アプリを追加",
   "header.howToUse": "使い方",
@@ -220,6 +234,13 @@ const ja: Translations = {
   "status.outage": "障害",
   "status.monitored": "{n} 件監視中",
 
+  // Vendor raw component statuses (Statuspage / Instatus tokens)
+  "rawStatus.operational": "正常",
+  "rawStatus.degradedperformance": "パフォーマンス低下",
+  "rawStatus.partialoutage": "一部障害",
+  "rawStatus.majoroutage": "重大障害",
+  "rawStatus.undermaintenance": "メンテナンス中",
+
   // Empty state
   "empty.title": "監視中のアプリはありません",
   "empty.body": "厳選された人気アプリから選ぶか、Marketplace を検索してください。",
@@ -232,6 +253,7 @@ const ja: Translations = {
   "table.response": "応答",
   "table.checked": "確認時刻",
   "table.noStatusPage": "ステータスページなし",
+  "history.noData": "データなし",
 
   // Onboarding
   "onboarding.title": "ステータスダッシュボードへようこそ",
@@ -253,6 +275,7 @@ const ja: Translations = {
   "addApp.placeholder": "アプリ名を入力(例: draw.io、Zephyr、Tempo…)",
   "addApp.hint": "Marketplace を検索するには 2 文字以上入力してください。",
   "addApp.empty": "「{q}」に該当するアプリが見つかりません。",
+  "addApp.emptyHint": "ヒント: Marketplace の掲載名は英語です — アプリの英語名で検索してみてください。",
   "addApp.autoBadge": "自動",
   "addApp.noUrlBadge": "URL なし",
   "addApp.urlLabel": "ステータスページ URL",
@@ -291,6 +314,9 @@ const ja: Translations = {
   "share.importButton": "インポート",
   "share.importSuccess": "{count} 件のアプリをインポートしました。",
   "share.importDuplicate": "{added} 件をインポート、{skipped} 件はすでに追加済みです。",
+  "share.invalid": "共有リンクが無効か破損しています。",
+  "share.blockedUrl": "ブロックされたURL",
+  "import.fileInvalid": "無効なバックアップファイルです。",
 
   // Jira import
   "header.jiraImport": "Jira からインポート",
@@ -392,6 +418,7 @@ const de: Translations = {
   "header.disclaimer": "Unabhängiges Projekt — nicht mit Atlassian verbunden.",
   "header.refresh": "Aktualisieren",
   "header.exportTooltip": "App-Liste exportieren",
+  "header.importTooltip": "App-Liste importieren (JSON)",
   "header.quickSetup": "Schnellstart",
   "header.addApp": "App hinzufügen",
   "header.howToUse": "Anleitung",
@@ -406,6 +433,13 @@ const de: Translations = {
   "status.outage": "Ausfall",
   "status.monitored": "{n} überwacht",
 
+  // Vendor raw component statuses (Statuspage / Instatus tokens)
+  "rawStatus.operational": "Betriebsbereit",
+  "rawStatus.degradedperformance": "Leistungseinbußen",
+  "rawStatus.partialoutage": "Teilausfall",
+  "rawStatus.majoroutage": "Schwerer Ausfall",
+  "rawStatus.undermaintenance": "Wartungsarbeiten",
+
   // Empty state
   "empty.title": "Keine Apps überwacht",
   "empty.body": "Wählen Sie aus einer kuratierten Liste oder durchsuchen Sie den Marketplace.",
@@ -418,6 +452,7 @@ const de: Translations = {
   "table.response": "Antwort",
   "table.checked": "Geprüft",
   "table.noStatusPage": "Keine Statusseite",
+  "history.noData": "Keine Daten",
 
   // Onboarding
   "onboarding.title": "Willkommen im Status-Dashboard",
@@ -439,6 +474,7 @@ const de: Translations = {
   "addApp.placeholder": "App-Namen eingeben (z. B. draw.io, Zephyr, Tempo…)",
   "addApp.hint": "Mindestens 2 Zeichen eingeben, um den Marketplace zu durchsuchen.",
   "addApp.empty": "Keine Apps für „{q}“ gefunden.",
+  "addApp.emptyHint": "Tipp: Marketplace-Einträge sind auf Englisch — versuchen Sie den englischen App-Namen.",
   "addApp.autoBadge": "Auto",
   "addApp.noUrlBadge": "Keine URL",
   "addApp.urlLabel": "Status-Page-URL",
@@ -477,6 +513,9 @@ const de: Translations = {
   "share.importButton": "Importieren",
   "share.importSuccess": "{count} Apps importiert.",
   "share.importDuplicate": "{added} Apps importiert, {skipped} bereits in Ihrer Liste.",
+  "share.invalid": "Ungültiger oder beschädigter Freigabe-Link.",
+  "share.blockedUrl": "Blockierte URL",
+  "import.fileInvalid": "Ungültige Sicherungsdatei.",
 
   // Jira import
   "header.jiraImport": "Aus Jira importieren",
@@ -578,6 +617,7 @@ const ko: Translations = {
   "header.disclaimer": "독립 프로젝트 — Atlassian과 무관합니다.",
   "header.refresh": "새로고침",
   "header.exportTooltip": "앱 목록 내보내기",
+  "header.importTooltip": "앱 목록 가져오기 (JSON)",
   "header.quickSetup": "빠른 설정",
   "header.addApp": "앱 추가",
   "header.howToUse": "사용 방법",
@@ -592,6 +632,13 @@ const ko: Translations = {
   "status.outage": "장애",
   "status.monitored": "{n}개 모니터링 중",
 
+  // Vendor raw component statuses (Statuspage / Instatus tokens)
+  "rawStatus.operational": "정상",
+  "rawStatus.degradedperformance": "성능 저하",
+  "rawStatus.partialoutage": "부분 장애",
+  "rawStatus.majoroutage": "주요 장애",
+  "rawStatus.undermaintenance": "점검 중",
+
   // Empty state
   "empty.title": "모니터링 중인 앱이 없습니다",
   "empty.body": "추천 목록에서 팀이 사용하는 앱을 선택하거나 Marketplace에서 검색하세요.",
@@ -604,6 +651,7 @@ const ko: Translations = {
   "table.response": "응답",
   "table.checked": "확인 시각",
   "table.noStatusPage": "상태 페이지 없음",
+  "history.noData": "데이터 없음",
 
   // Onboarding
   "onboarding.title": "Status Dashboard에 오신 것을 환영합니다",
@@ -625,6 +673,7 @@ const ko: Translations = {
   "addApp.placeholder": "앱 이름 입력 (예: draw.io, Zephyr, Tempo…)",
   "addApp.hint": "Marketplace를 검색하려면 2자 이상 입력하세요.",
   "addApp.empty": "「{q}」에 해당하는 앱이 없습니다.",
+  "addApp.emptyHint": "팁: Marketplace 등록명은 영어입니다 — 영문 앱 이름으로 검색해보세요.",
   "addApp.autoBadge": "자동",
   "addApp.noUrlBadge": "URL 없음",
   "addApp.urlLabel": "상태 페이지 URL",
@@ -663,6 +712,9 @@ const ko: Translations = {
   "share.importButton": "가져오기",
   "share.importSuccess": "{count}개 앱을 가져왔습니다.",
   "share.importDuplicate": "{added}개 가져옴, {skipped}개는 이미 추가돼 있습니다.",
+  "share.invalid": "유효하지 않거나 손상된 공유 링크입니다.",
+  "share.blockedUrl": "차단된 URL",
+  "import.fileInvalid": "유효하지 않은 백업 파일입니다.",
 
   // Jira import
   "header.jiraImport": "Jira에서 가져오기",
@@ -764,6 +816,7 @@ const fr: Translations = {
   "header.disclaimer": "Projet indépendant — non affilié à Atlassian.",
   "header.refresh": "Actualiser",
   "header.exportTooltip": "Exporter la liste",
+  "header.importTooltip": "Importer la liste (JSON)",
   "header.quickSetup": "Configuration rapide",
   "header.addApp": "Ajouter une app",
   "header.howToUse": "Mode d'emploi",
@@ -778,6 +831,13 @@ const fr: Translations = {
   "status.outage": "Panne",
   "status.monitored": "{n} suivies",
 
+  // Vendor raw component statuses (Statuspage / Instatus tokens)
+  "rawStatus.operational": "Opérationnel",
+  "rawStatus.degradedperformance": "Performances dégradées",
+  "rawStatus.partialoutage": "Panne partielle",
+  "rawStatus.majoroutage": "Panne majeure",
+  "rawStatus.undermaintenance": "En maintenance",
+
   // Empty
   "empty.title": "Aucune app suivie",
   "empty.body": "Choisissez parmi une liste sélectionnée ou recherchez sur le Marketplace.",
@@ -790,6 +850,7 @@ const fr: Translations = {
   "table.response": "Réponse",
   "table.checked": "Vérifiée",
   "table.noStatusPage": "Pas de page de statut",
+  "history.noData": "Aucune donnée",
 
   // Onboarding
   "onboarding.title": "Bienvenue sur le Status Dashboard",
@@ -811,6 +872,7 @@ const fr: Translations = {
   "addApp.placeholder": "Saisissez le nom (ex. draw.io, Zephyr, Tempo…)",
   "addApp.hint": "Saisissez au moins 2 caractères pour rechercher.",
   "addApp.empty": "Aucune app trouvée pour « {q} ».",
+  "addApp.emptyHint": "Astuce : les fiches Marketplace sont en anglais — essayez le nom anglais de l'app.",
   "addApp.autoBadge": "Auto",
   "addApp.noUrlBadge": "Sans URL",
   "addApp.urlLabel": "URL de la page de statut",
@@ -849,6 +911,9 @@ const fr: Translations = {
   "share.importButton": "Importer",
   "share.importSuccess": "{count} apps importées.",
   "share.importDuplicate": "{added} apps importées, {skipped} déjà dans votre liste.",
+  "share.invalid": "Lien de partage invalide ou corrompu.",
+  "share.blockedUrl": "URL bloquée",
+  "import.fileInvalid": "Fichier de sauvegarde invalide.",
 
   // Jira import
   "header.jiraImport": "Importer depuis Jira",

@@ -325,8 +325,13 @@ function extractStatuspageStatus(
     )
     .map((c) => {
       const groupName = c.group_id ? groupNameById.get(c.group_id) : undefined;
+      // Skip the prefix when the component name already contains the group name
+      // (e.g. group "ScriptRunner" + component "ScriptRunner for Jira Cloud") —
+      // avoids duplicated tooltip text and double-counted score tokens.
+      const needsPrefix =
+        groupName && !c.name.toLowerCase().includes(groupName.toLowerCase());
       return {
-        name: groupName ? `${groupName} ${c.name}` : c.name,
+        name: needsPrefix ? `${groupName} ${c.name}` : c.name,
         rawStatus: c.status ?? "",
       };
     });

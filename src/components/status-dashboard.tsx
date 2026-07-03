@@ -25,6 +25,7 @@ import {
   Sparkles,
   Sun,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import { AddAppDialog } from "@/components/add-app-dialog";
@@ -54,16 +55,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { resolveStatusUrl, VENDOR_BLACKLIST } from "@/types";
 import { normalizeVendorName } from "@/lib/status-discovery";
+import { guardOutboundUrl } from "@/lib/url-guard";
 import type {
   AppHealthStatus,
+  CheckType,
   HealthCheckResponse,
   HealthCheckResult,
   PingRecord,
@@ -138,16 +136,47 @@ function toStatusPageUrl(statusUrl: string): string | null {
   return base || null;
 }
 
+// A percentage over 1–2 samples is misleading — hide it until we have enough.
+const MIN_UPTIME_SAMPLES = 3;
+
 function uptimePct(history: PingRecord[]): number | null {
-  if (history.length === 0) return null;
-  const ok = history.filter((r) => r.status === "operational").length;
-  return Math.round((ok / history.length) * 100);
+  if (history.length < MIN_UPTIME_SAMPLES) return null;
+  // Industry convention: degraded still counts as "up" — the service responds.
+  const up = history.filter((r) => r.status !== "outage").length;
+  return Math.round((up / history.length) * 100);
+}
+
+// ── Vendor raw-status localization ─────────────────────────────────────────────
+// Server messages end in a raw vendor status token, e.g.
+// "ScriptRunner for Jira Cloud: degraded performance". Translate the known
+// Statuspage/Instatus tokens so they don't appear as raw English inside a
+// localized UI; unknown suffixes (incident titles etc.) pass through untouched.
+
+const KNOWN_RAW_STATUSES = new Set([
+  "operational",
+  "degradedperformance",
+  "partialoutage",
+  "majoroutage",
+  "undermaintenance",
+]);
+
+function localizeStatusMessage(
+  message: string,
+  t: (key: string) => string,
+): string {
+  const m = message.match(/^(.+):\s*([A-Za-z][A-Za-z _-]*)$/);
+  if (!m) return message;
+  const token = m[2].trim().toLowerCase().replace(/[\s_-]+/g, "");
+  return KNOWN_RAW_STATUSES.has(token)
+    ? `${m[1]}: ${t(`rawStatus.${token}`)}`
+    : message;
 }
 
 // ── Heartbeat bars ─────────────────────────────────────────────────────────────
 // Uses native `title` tooltip to avoid nested-interactive-element issues.
 
 const HeartbeatBars = memo(function HeartbeatBars({ history }: { history: PingRecord[] }) {
+  const { t, locale } = useTranslation();
   const slots = useMemo(() => {
     const filled = history.slice(-BAR_COUNT);
     const emptyCount = BAR_COUNT - filled.length;
@@ -162,14 +191,14 @@ const HeartbeatBars = memo(function HeartbeatBars({ history }: { history: PingRe
       {slots.map((record, idx) => {
         const tip = record
           ? [
-              record.status.toUpperCase(),
-              new Date(record.timestamp).toLocaleString(),
+              t(`status.${record.status}`),
+              new Date(record.timestamp).toLocaleString(locale),
               record.responseTimeMs != null ? `${record.responseTimeMs} ms` : null,
-              record.message ?? null,
+              record.message ? localizeStatusMessage(record.message, t) : null,
             ]
               .filter(Boolean)
               .join("\n")
-          : "No data";
+          : t("history.noData");
 
         return (
           <span
@@ -178,7 +207,7 @@ const HeartbeatBars = memo(function HeartbeatBars({ history }: { history: PingRe
             className={cn(
               "block h-7 w-1 rounded-[2px] cursor-default transition-opacity hover:opacity-60",
               record === null
-                ? "bg-slate-200"
+                ? "bg-slate-200 dark:bg-slate-800"
                 : record.status === "operational"
                   ? "bg-emerald-500"
                   : record.status === "degraded"
@@ -262,23 +291,28 @@ function StatusCell({
     <div className="flex items-center gap-2">
       {indicator}
       {isError ? (
-        <Tooltip>
-          <TooltipTrigger className="cursor-help p-0 leading-none">
-            <span
-              className={cn(
-                "inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium",
-                status === "outage"
-                  ? "bg-red-100 text-red-700"
-                  : "bg-amber-100 text-amber-700",
-              )}
-            >
-              {label} ⓘ
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="max-w-xs text-xs">
-            {message}
-          </TooltipContent>
-        </Tooltip>
+        // Popover with openOnHover: hover on desktop, tap on touch devices —
+        // a plain Tooltip has no touch affordance at all.
+        <Popover>
+          <PopoverTrigger
+            openOnHover
+            delay={150}
+            className={cn(
+              "cursor-help inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium",
+              status === "outage"
+                ? "bg-red-100 text-red-700"
+                : "bg-amber-100 text-amber-700",
+            )}
+          >
+            {label} ⓘ
+          </PopoverTrigger>
+          <PopoverContent
+            side="right"
+            className="w-auto max-w-xs bg-foreground p-0 px-3 py-1.5 text-xs text-background ring-0"
+          >
+            {message ? localizeStatusMessage(message, t) : null}
+          </PopoverContent>
+        </Popover>
       ) : (
         <span
           className={cn(
@@ -541,7 +575,7 @@ export function StatusDashboard() {
   });
   const [deleteTarget, setDeleteTarget] = useState<RegisteredApp | null>(null);
   const [toasts, setToasts] = useState<StatusToast[]>([]);
-  const [notices, setNotices] = useState<{ id: string; message: string }[]>([]);
+  const [notices, setNotices] = useState<{ id: string; message: string; variant?: "success" | "error" }[]>([]);
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
   const [shareImportApps, setShareImportApps] = useState<RegisteredApp[] | null>(null);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">("default");
@@ -632,23 +666,33 @@ export function StatusDashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once after mount — deps intentionally empty
 
-  // ── Share-via-URL ──────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const payload = parseShareHash();
-    if (!payload) return;
-    // Strip the hash immediately so refreshing doesn't re-trigger the dialog
-    history.replaceState(null, "", window.location.pathname + window.location.search);
-    void decodeSharePayload(payload).then((decoded) => {
-      if (decoded && decoded.length > 0) setShareImportApps(decoded);
-    });
-  }, []);
-
-  const addNotice = useCallback((message: string) => {
+  const addNotice = useCallback((message: string, variant: "success" | "error" = "success") => {
     const id = crypto.randomUUID();
-    setNotices((prev) => [...prev, { id, message }]);
-    setTimeout(() => setNotices((prev) => prev.filter((n) => n.id !== id)), 3000);
+    setNotices((prev) => [...prev, { id, message, variant }]);
+    setTimeout(() => setNotices((prev) => prev.filter((n) => n.id !== id)), variant === "error" ? 5000 : 3000);
   }, []);
+
+  // ── Share-via-URL ──────────────────────────────────────────────────────────
+  // Runs on mount AND on hashchange — navigating to a #share= URL in an
+  // already-open tab changes only the hash (no reload), so a mount-only check
+  // would silently miss it.
+  useEffect(() => {
+    const handleShareHash = () => {
+      const payload = parseShareHash();
+      if (!payload) return;
+      // Strip the hash immediately so refreshing doesn't re-trigger the dialog
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      void decodeSharePayload(payload).then((decoded) => {
+        if (decoded && decoded.length > 0) setShareImportApps(decoded);
+        // Corrupt/truncated payload (links often get cut in messengers/mail) —
+        // tell the user instead of silently doing nothing.
+        else addNotice(t("share.invalid"), "error");
+      });
+    };
+    handleShareHash();
+    window.addEventListener("hashchange", handleShareHash);
+    return () => window.removeEventListener("hashchange", handleShareHash);
+  }, [addNotice, t]);
 
   const handleShare = useCallback(() => {
     void buildShareUrl(apps).then((url) =>
@@ -657,8 +701,16 @@ export function StatusDashboard() {
   }, [apps, t, addNotice]);
 
   const handleShareImport = useCallback((incoming: RegisteredApp[]) => {
+    // Defang URLs that fail the SSRF guard — a malicious link can hide an
+    // arbitrary target behind a familiar app name. The app is still imported,
+    // just without monitoring.
+    const sanitized = incoming.map((a) =>
+      a.statusUrl && !guardOutboundUrl(a.statusUrl).ok
+        ? { ...a, statusUrl: "", checkType: "custom" as const }
+        : a,
+    );
     const existingNames = new Set(appsRef.current.map((a) => a.appName.toLowerCase()));
-    const fresh = incoming.filter((a) => !existingNames.has(a.appName.toLowerCase()));
+    const fresh = sanitized.filter((a) => !existingNames.has(a.appName.toLowerCase()));
     const skipped = incoming.length - fresh.length;
     const message =
       skipped > 0
@@ -859,6 +911,25 @@ export function StatusDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted, refreshMs]);
 
+  // Catch-up check when the tab becomes visible again — browsers throttle or
+  // freeze background-tab timers, so the interval above can silently stop
+  // firing. If the last check is older than the refresh interval (or never
+  // happened), run one immediately.
+  useEffect(() => {
+    if (!isMounted || refreshMs === 0) return;
+    const handleVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const raw = localStorage.getItem(LAST_CHECKED_KEY);
+        if (raw && Date.now() - new Date(raw).getTime() < refreshMs) return;
+      } catch { /* fall through to check */ }
+      void checkAllStatuses();
+    };
+    document.addEventListener("visibilitychange", handleVisible);
+    return () => document.removeEventListener("visibilitychange", handleVisible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMounted, refreshMs]);
+
   // Seed popular apps on first visit — use a dedicated flag so the APPS_KEY
   // persistence effect (which writes "[]" immediately) doesn't block seeding.
   // Skip seeding when the URL contains a share payload — the share import will
@@ -877,7 +948,25 @@ export function StatusDashboard() {
           .map(({ id, appName, vendorName, checkType, statusUrl, logoUrl }) => ({
             id, appName, vendorName, checkType, statusUrl, logoUrl,
           }));
-        if (defaults.length > 0) setApps(defaults);
+        if (defaults.length === 0) return;
+        setApps(defaults);
+        // Kick off the first status check right away. The mount-time initial
+        // check already ran with an empty app list (seeding is async), so
+        // without this the seeded rows would spin until the next manual or
+        // interval refresh.
+        const ids = defaults.map((a) => a.id);
+        setAddingIds((prev) => new Set([...prev, ...ids]));
+        void fetchStatusBatched(defaults)
+          .then((data) => {
+            if (data?.results) {
+              applyResultsRef.current(data.results, latestByIdRef.current);
+              setLastCheckedAt(new Date());
+            }
+          })
+          .catch(() => undefined)
+          .finally(() => {
+            setAddingIds((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
+          });
       })
       .catch(() => { /* ignore */ });
   }, [isMounted]);
@@ -989,6 +1078,48 @@ export function StatusDashboard() {
     URL.revokeObjectURL(url);
   }, [apps]);
 
+  // Restore an exported JSON backup. Accepts the export shape
+  // ({ exportedAt, apps: [...] }) or a bare RegisteredApp[] array. Every entry
+  // is re-validated: appName required, statusUrl must pass the SSRF guard
+  // (defanged to unmonitored otherwise), checkType whitelisted.
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const VALID_CHECK_TYPES = new Set<string>(["statuspage_api", "http_ping", "custom"]);
+  const handleImportFile = (file: File) => {
+    void file
+      .text()
+      .then((text) => {
+        const parsed = JSON.parse(text) as unknown;
+        const rawApps = Array.isArray(parsed)
+          ? parsed
+          : (parsed as { apps?: unknown[] } | null)?.apps;
+        if (!Array.isArray(rawApps)) throw new Error("not an app list");
+        const imported: RegisteredApp[] = rawApps.flatMap((entry) => {
+          const a = entry as Partial<RegisteredApp>;
+          if (typeof a.appName !== "string" || a.appName.trim() === "") return [];
+          const statusUrl =
+            typeof a.statusUrl === "string" && guardOutboundUrl(a.statusUrl).ok
+              ? a.statusUrl
+              : "";
+          return [{
+            id: typeof a.id === "string" && a.id !== "" ? a.id : crypto.randomUUID(),
+            appName: a.appName,
+            vendorName: typeof a.vendorName === "string" ? a.vendorName : "",
+            statusUrl,
+            checkType: !statusUrl
+              ? ("custom" as CheckType)
+              : VALID_CHECK_TYPES.has(a.checkType as string)
+                ? (a.checkType as CheckType)
+                : "statuspage_api",
+            ...(typeof a.logoUrl === "string" ? { logoUrl: a.logoUrl } : {}),
+          }];
+        });
+        if (imported.length === 0) throw new Error("no valid apps");
+        handleBulkAddApps(imported);
+        addNotice(t("share.importSuccess", { count: imported.length }));
+      })
+      .catch(() => addNotice(t("import.fileInvalid"), "error"));
+  };
+
   // ── Derived ────────────────────────────────────────────────────────────────
   const existingIds = useMemo(() => new Set(apps.map((a) => a.id)), [apps]);
   const existingNames = useMemo(() => new Set(apps.map((a) => a.appName.toLowerCase())), [apps]);
@@ -1082,7 +1213,11 @@ export function StatusDashboard() {
             key={n.id}
             className="pointer-events-auto flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5 shadow-lg text-sm"
           >
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+            {n.variant === "error" ? (
+              <AlertTriangle className="h-4 w-4 shrink-0 text-red-500" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+            )}
             <span>{n.message}</span>
           </div>
         ))}
@@ -1152,8 +1287,10 @@ export function StatusDashboard() {
             </Popover>
           </div>
 
-          {/* Share / Export dropdown — only when apps exist */}
-          {isMounted && apps.length > 0 && (
+          {/* Share / Export / Import dropdown — Import must work with an empty
+              list too (restoring a backup in a fresh browser), so the menu is
+              always rendered; Share/Export are disabled without apps. */}
+          {isMounted && (
             <Popover>
               <PopoverTrigger
                 render={
@@ -1162,11 +1299,12 @@ export function StatusDashboard() {
                   </Button>
                 }
               />
-              <PopoverContent align="end" className="w-44 p-1">
+              <PopoverContent align="end" className="w-48 p-1">
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                  disabled={apps.length === 0}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Link2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   {t("share.tooltip")}
@@ -1174,14 +1312,34 @@ export function StatusDashboard() {
                 <button
                   type="button"
                   onClick={handleExport}
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                  disabled={apps.length === 0}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   {t("header.exportTooltip")}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => importInputRef.current?.click()}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent"
+                >
+                  <Upload className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  {t("header.importTooltip")}
+                </button>
               </PopoverContent>
             </Popover>
           )}
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImportFile(file);
+              e.target.value = ""; // allow re-selecting the same file
+            }}
+          />
 
           <div className="h-4 w-px bg-border" />
 
@@ -1603,6 +1761,7 @@ export function StatusDashboard() {
           {shareImportApps && (
             <ShareImportDialog
               apps={shareImportApps}
+              existingNames={existingNames}
               onImport={handleShareImport}
               onClose={() => setShareImportApps(null)}
             />

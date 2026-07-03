@@ -334,9 +334,14 @@ export function AddAppDialog({
                 {showSkeleton && <ResultSkeleton />}
 
                 {showEmpty && (
-                  <p className="px-4 py-10 text-center text-xs text-muted-foreground">
-                    {t("addApp.empty", { q: debouncedQuery })}
-                  </p>
+                  <div className="px-4 py-10 text-center text-xs text-muted-foreground">
+                    <p>{t("addApp.empty", { q: debouncedQuery })}</p>
+                    {/* Marketplace listings are English-only — nudge users searching
+                        in their native language toward the English app name. */}
+                    {/[^\x20-\x7E]/.test(debouncedQuery) && (
+                      <p className="mt-1.5 text-muted-foreground/80">{t("addApp.emptyHint")}</p>
+                    )}
+                  </div>
                 )}
 
                 {showResults && (
