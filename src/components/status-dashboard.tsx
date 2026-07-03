@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Bell,
   BellOff,
+  CalendarClock,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -12,6 +13,7 @@ import {
   ChevronsUpDown,
   CircleDashed,
   Download,
+  History,
   ExternalLink,
   HelpCircle,
   Languages,
@@ -26,6 +28,7 @@ import {
   Sun,
   Trash2,
   Upload,
+  Wrench,
   X,
 } from "lucide-react";
 import { AddAppDialog } from "@/components/add-app-dialog";
@@ -119,7 +122,8 @@ interface StatusToast {
 const STATUS_PRIORITY: Record<AppHealthStatus, number> = {
   outage: 0,
   degraded: 1,
-  operational: 2,
+  maintenance: 2,
+  operational: 3,
 };
 
 type SortKey = "appName" | "vendorName" | "status" | "responseTimeMs" | "checkedAt";
@@ -159,6 +163,13 @@ const KNOWN_RAW_STATUSES = new Set([
   "majoroutage",
   "undermaintenance",
 ]);
+
+const STATUS_TEXT_CLASS: Record<AppHealthStatus, string> = {
+  operational: "text-emerald-600",
+  degraded: "text-amber-600",
+  outage: "text-red-600",
+  maintenance: "text-blue-600",
+};
 
 function localizeStatusMessage(
   message: string,
@@ -212,7 +223,9 @@ const HeartbeatBars = memo(function HeartbeatBars({ history }: { history: PingRe
                   ? "bg-emerald-500"
                   : record.status === "degraded"
                     ? "bg-amber-400"
-                    : "bg-red-500",
+                    : record.status === "maintenance"
+                      ? "bg-blue-400"
+                      : "bg-red-500",
             )}
           />
         );
@@ -232,7 +245,7 @@ function StatusCell({
   isUnconfigured?: boolean;
   isAdding?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   if (isUnconfigured) {
     return (
       <div className="flex items-center gap-1.5 text-muted-foreground/50">
@@ -258,7 +271,7 @@ function StatusCell({
     );
   }
 
-  const { status, message } = result;
+  const { status, message, incident, upcomingMaintenance } = result;
   const isError = status !== "operational" && Boolean(message?.trim());
 
   const indicator = {
@@ -283,47 +296,80 @@ function StatusCell({
         <span className="h-2 w-2 rounded-full bg-red-500" />
       </div>
     ),
+    maintenance: (
+      <div className="flex items-center gap-2 text-blue-600">
+        <Wrench className="h-4 w-4" />
+        <span className="h-2 w-2 rounded-full bg-blue-400" />
+      </div>
+    ),
   }[status];
 
   const label = t(`status.${status}`);
 
   return (
-    <div className="flex items-center gap-2">
-      {indicator}
-      {isError ? (
-        // Popover with openOnHover: hover on desktop, tap on touch devices —
-        // a plain Tooltip has no touch affordance at all.
-        <Popover>
-          <PopoverTrigger
-            openOnHover
-            delay={150}
+    <div className="min-w-0">
+      <div className="flex items-center gap-2">
+        {indicator}
+        {isError ? (
+          // Popover with openOnHover: hover on desktop, tap on touch devices —
+          // a plain Tooltip has no touch affordance at all.
+          <Popover>
+            <PopoverTrigger
+              openOnHover
+              delay={150}
+              className={cn(
+                "cursor-help inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium",
+                status === "outage"
+                  ? "bg-red-100 text-red-700"
+                  : status === "maintenance"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-amber-100 text-amber-700",
+              )}
+            >
+              {label} ⓘ
+            </PopoverTrigger>
+            <PopoverContent
+              side="right"
+              className="w-auto max-w-xs bg-foreground p-0 px-3 py-1.5 text-xs text-background ring-0"
+            >
+              <div className="space-y-1">
+                {message && <p>{localizeStatusMessage(message, t)}</p>}
+                {incident && incident !== message && <p>{incident}</p>}
+              </div>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <span
             className={cn(
-              "cursor-help inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium",
-              status === "outage"
-                ? "bg-red-100 text-red-700"
-                : "bg-amber-100 text-amber-700",
+              "text-xs font-medium",
+              status === "operational" && "text-emerald-700",
+              status === "degraded" && "text-amber-700",
+              status === "outage" && "text-red-700",
+              status === "maintenance" && "text-blue-700",
             )}
           >
-            {label} ⓘ
-          </PopoverTrigger>
-          <PopoverContent
-            side="right"
-            className="w-auto max-w-xs bg-foreground p-0 px-3 py-1.5 text-xs text-background ring-0"
-          >
-            {message ? localizeStatusMessage(message, t) : null}
-          </PopoverContent>
-        </Popover>
-      ) : (
-        <span
-          className={cn(
-            "text-xs font-medium",
-            status === "operational" && "text-emerald-700",
-            status === "degraded" && "text-amber-700",
-            status === "outage" && "text-red-700",
-          )}
+            {label}
+          </span>
+        )}
+      </div>
+      {/* Active incident headline — "Degraded" alone vs "Degraded — API latency
+          in EU region" are worlds apart when triaging. Full text in the popover. */}
+      {incident && (
+        <p className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground" title={incident}>
+          {incident}
+        </p>
+      )}
+      {/* Upcoming maintenance window announced by the vendor */}
+      {!incident && upcomingMaintenance && (
+        <p
+          className="mt-0.5 flex items-center gap-1 truncate text-[11px] leading-tight text-blue-600/90"
+          title={`${upcomingMaintenance.name} — ${new Date(upcomingMaintenance.scheduledFor).toLocaleString(locale)}`}
         >
-          {label}
-        </span>
+          <CalendarClock className="h-3 w-3 shrink-0" />
+          <span className="truncate">
+            {t("maintenance.upcoming")} · {new Date(upcomingMaintenance.scheduledFor).toLocaleString(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </span>
+        </p>
       )}
     </div>
   );
@@ -559,6 +605,7 @@ export function StatusDashboard() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [quickSetupOpen, setQuickSetupOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
   // Auto-open onboarding on first visit (no apps stored yet). Lazy initializer
   // reads localStorage so the dialog renders open immediately after hydration —
   // no setState-in-effect needed.
@@ -754,6 +801,8 @@ export function StatusDashboard() {
             ? t("notification.outage", { appName })
             : to === "degraded"
             ? t("notification.degraded", { appName })
+            : to === "maintenance"
+            ? t("notification.maintenance", { appName })
             : t("notification.recovered", { appName });
         try { new Notification(appName, { body, icon: "/favicon.svg" }); } catch { /* ignore */ }
       }
@@ -1130,10 +1179,40 @@ export function StatusDashboard() {
       operational: vals.filter((r) => r.status === "operational").length,
       degraded: vals.filter((r) => r.status === "degraded").length,
       outage: vals.filter((r) => r.status === "outage").length,
+      maintenance: vals.filter((r) => r.status === "maintenance").length,
     };
   }, [latestById]);
 
   const [unconfiguredOpen, setUnconfiguredOpen] = useState(false);
+
+  // Status-transition events derived from ping history — toasts vanish, this
+  // is the persistent record ("draw.io: Operational → Outage, 14:32").
+  const timelineEvents = useMemo(() => {
+    if (!timelineOpen) return [];
+    const events: Array<{
+      appId: string; appName: string; logoUrl?: string;
+      from: AppHealthStatus; to: AppHealthStatus; timestamp: string; message?: string;
+    }> = [];
+    for (const app of apps) {
+      const hist = historyById[app.id] ?? [];
+      for (let i = 1; i < hist.length; i++) {
+        if (hist[i].status !== hist[i - 1].status) {
+          events.push({
+            appId: app.id,
+            appName: app.appName,
+            logoUrl: app.logoUrl,
+            from: hist[i - 1].status,
+            to: hist[i].status,
+            timestamp: hist[i].timestamp,
+            message: hist[i].message,
+          });
+        }
+      }
+    }
+    return events
+      .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
+      .slice(0, 100);
+  }, [timelineOpen, apps, historyById]);
 
   const { monitoredApps, unconfiguredApps } = useMemo(() => {
     const sorted = [...apps].sort((a, b) => {
@@ -1190,13 +1269,17 @@ export function StatusDashboard() {
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
             ) : toast.to === "degraded" ? (
               <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+            ) : toast.to === "maintenance" ? (
+              <Wrench className="h-4 w-4 shrink-0 text-blue-500" />
             ) : (
               <AlertTriangle className="h-4 w-4 shrink-0 text-red-500" />
             )}
             <div className="min-w-0">
               <span className="font-medium">{toast.appName}</span>
-              <span className="ml-1.5 text-muted-foreground capitalize">
-                {toast.from} → {toast.to}
+              <span className="ml-1.5 text-muted-foreground">
+                <span className={STATUS_TEXT_CLASS[toast.from]}>{t(`status.${toast.from}`)}</span>
+                {" → "}
+                <span className={STATUS_TEXT_CLASS[toast.to]}>{t(`status.${toast.to}`)}</span>
               </span>
             </div>
             <button
@@ -1286,6 +1369,19 @@ export function StatusDashboard() {
               </PopoverContent>
             </Popover>
           </div>
+
+          {/* Event timeline */}
+          {isMounted && apps.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={t("header.timeline")}
+              onClick={() => setTimelineOpen(true)}
+            >
+              <History className="h-3.5 w-3.5" />
+            </Button>
+          )}
 
           {/* Share / Export / Import dropdown — Import must work with an empty
               list too (restoring a backup in a fresh browser), so the menu is
@@ -1498,6 +1594,14 @@ export function StatusDashboard() {
               {t("status.outage")}
               <span className="ml-0.5 font-bold">{summary.outage}</span>
             </Badge>
+            {/* Maintenance badge only when relevant — usually zero */}
+            {summary.maintenance > 0 && (
+              <Badge className="gap-1.5 bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/30">
+                <Wrench className="h-3 w-3" />
+                {t("status.maintenance")}
+                <span className="ml-0.5 font-bold">{summary.maintenance}</span>
+              </Badge>
+            )}
             <Badge variant="outline" className="text-muted-foreground">
               {t("status.monitored", { n: apps.length })}
             </Badge>
@@ -1751,6 +1855,47 @@ export function StatusDashboard() {
                   {t("common.remove")}
                 </Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Event timeline — status transitions derived from ping history */}
+          <Dialog open={timelineOpen} onOpenChange={setTimelineOpen}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{t("header.timeline")}</DialogTitle>
+                <DialogDescription>
+                  {t("timeline.desc", { n: HISTORY_MAX })}
+                </DialogDescription>
+              </DialogHeader>
+              {timelineEvents.length === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  {t("timeline.empty")}
+                </p>
+              ) : (
+                <ul className="max-h-[420px] divide-y overflow-y-auto">
+                  {timelineEvents.map((ev, i) => (
+                    <li key={`${ev.appId}-${ev.timestamp}-${i}`} className="flex items-center gap-3 py-2.5">
+                      <AppLogo src={ev.logoUrl} alt={ev.appName} className="h-7 w-7 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium leading-tight">{ev.appName}</p>
+                        <p className="text-xs">
+                          <span className={STATUS_TEXT_CLASS[ev.from]}>{t(`status.${ev.from}`)}</span>
+                          <span className="text-muted-foreground"> → </span>
+                          <span className={STATUS_TEXT_CLASS[ev.to]}>{t(`status.${ev.to}`)}</span>
+                        </p>
+                        {ev.message && (
+                          <p className="truncate text-[11px] text-muted-foreground/80" title={ev.message}>
+                            {localizeStatusMessage(ev.message, t)}
+                          </p>
+                        )}
+                      </div>
+                      <time className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                        {new Date(ev.timestamp).toLocaleString(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </DialogContent>
           </Dialog>
 

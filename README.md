@@ -38,7 +38,10 @@ Atlassian's own services have a status page, but the hundreds of third-party Mar
 | **Self-healing URLs** | When a vendor moves their status page, the dashboard detects the DNS failure, auto-discovers the new URL, retries the check, and silently persists the replacement. |
 | **Live Health Checks** | Calls vendor status APIs from the Next.js server (avoids CORS). Supports Atlassian Statuspage, Instatus, and Hund.io formats. |
 | **Per-app Component Matching** | On unified vendor pages (e.g. Adaptavist hosts ScriptRunner, Bitbucket Connector, etc. on one page), fuzzy-matches the specific app's component to avoid false positives from other apps' outages. |
-| **Heartbeat History** | Last 30 pings shown as colour-coded bars. Uptime % calculated per app. |
+| **Incident Headlines** | Active incident titles (with the latest update excerpt) from the vendor's status page are shown under the status badge — "Degraded — API latency in EU region" instead of a bare colour. |
+| **Maintenance Status** | Planned maintenance is a distinct blue state (not a false "Degraded" alarm), and announced maintenance windows are surfaced ahead of time from `scheduled_maintenances`. |
+| **Event Timeline** | Persistent log of status transitions ("draw.io: Operational → Outage, 14:32") derived from ping history — toasts disappear, the timeline doesn't. |
+| **Heartbeat History** | Last 30 pings shown as colour-coded bars. Uptime % calculated per app (degraded/maintenance count as up; hidden below 3 samples). |
 | **Result Caching** | Status results are persisted to localStorage and shown immediately on remount. Initial scan is skipped if the last check was less than 90 seconds ago — avoids redundant API calls on quick navigation. |
 | **Auto-refresh** | Health checks run automatically at a configurable interval: Off / 1m / 5m / 15m. Default is 5 minutes. |
 | **Status Change Notifications** | In-app toast when an app transitions between Operational / Degraded / Outage. Optionally enables browser notifications (via the Notifications permission) so you're alerted even when the tab is in the background. |

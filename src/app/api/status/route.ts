@@ -98,8 +98,10 @@ function normalizeComponentStatus(raw: string): AppHealthStatus {
       return "operational";
     case "degradedperformance":
     case "degraded":
-    case "undermaintenance":
       return "degraded";
+    case "undermaintenance":
+    case "maintenance":
+      return "maintenance";
     case "partialoutage":
       return "degraded";
     case "majoroutage":
@@ -127,20 +129,46 @@ interface StatuspageIncident {
   incident_updates?: Array<{ body?: string }>;
 }
 
+interface StatuspageMaintenance {
+  name?: string;
+  status?: string; // "scheduled" | "in_progress" | "verifying" | "completed"
+  scheduled_for?: string;
+}
+
 interface StatuspageSummary {
   status?: { indicator?: string; description?: string };
   components?: StatuspageComponent[];
   incidents?: StatuspageIncident[];
+  scheduled_maintenances?: StatuspageMaintenance[];
 }
 
 function globalFromStatuspageIndicator(indicator?: string): AppHealthStatus {
   switch (indicator) {
-    case "none":      return "operational";
-    case "minor":     return "degraded";
+    case "none":        return "operational";
+    case "minor":       return "degraded";
     case "major":
-    case "critical":  return "outage";
-    default:          return "degraded";
+    case "critical":    return "outage";
+    case "maintenance": return "maintenance";
+    default:            return "degraded";
   }
+}
+
+/** Build a one-line incident headline: title + latest update excerpt (≤200 chars). */
+function incidentHeadline(name: string, latestBody?: string): string {
+  const body = latestBody?.trim() ?? "";
+  return body.length > 0 && body.length <= 200 ? `${name} — ${body}` : name;
+}
+
+/** Next announced maintenance window from a Statuspage summary, if any. */
+function upcomingFromStatuspage(
+  payload: StatuspageSummary,
+): { name: string; scheduledFor: string } | undefined {
+  const upcoming = (payload.scheduled_maintenances ?? [])
+    .filter((m) => m.name && m.scheduled_for && m.status === "scheduled")
+    .sort((a, b) => (a.scheduled_for! < b.scheduled_for! ? -1 : 1))[0];
+  return upcoming
+    ? { name: upcoming.name!, scheduledFor: upcoming.scheduled_for! }
+    : undefined;
 }
 
 // ── Instatus types & helpers ────────────────────────────────────────────────
@@ -157,10 +185,16 @@ interface InstatusIncident {
   updates?: Array<{ body?: string }>;
 }
 
+interface InstatusMaintenance {
+  name?: string;
+  status?: string; // "NOTSTARTEDYET" | "INPROGRESS" | "COMPLETED"
+  start?: string;
+}
+
 interface InstatusSummary {
   page?: { status?: string }; // "UP" | "HASISSUES" | "UNDERMAINTENANCE"
   activeIncidents?: InstatusIncident[];
-  activeMaintenances?: unknown[];
+  activeMaintenances?: InstatusMaintenance[];
   components?: InstatusComponent[];
 }
 
@@ -170,8 +204,20 @@ function globalFromInstatus(payload: InstatusSummary): AppHealthStatus {
 
   const pageStatus = payload.page?.status?.toUpperCase() ?? "";
   if (pageStatus === "UP") return "operational";
-  if (pageStatus === "UNDERMAINTENANCE") return "degraded";
+  if (pageStatus === "UNDERMAINTENANCE") return "maintenance";
   return "degraded";
+}
+
+/** Next announced maintenance window from an Instatus summary, if any. */
+function upcomingFromInstatus(
+  payload: InstatusSummary,
+): { name: string; scheduledFor: string } | undefined {
+  const upcoming = (payload.activeMaintenances ?? [])
+    .filter((m) => m.name && m.start && m.status?.toUpperCase() === "NOTSTARTEDYET")
+    .sort((a, b) => (a.start! < b.start! ? -1 : 1))[0];
+  return upcoming
+    ? { name: upcoming.name!, scheduledFor: upcoming.start! }
+    : undefined;
 }
 
 // ── Shared component matcher ────────────────────────────────────────────────
@@ -303,12 +349,30 @@ function findFuzzyNameComponent(
 
 // ── Per-format extraction ───────────────────────────────────────────────────
 
+interface ExtractedStatus {
+  status: AppHealthStatus;
+  message: string;
+  incident?: string;
+  upcomingMaintenance?: { name: string; scheduledFor: string };
+}
+
 function extractStatuspageStatus(
   appName: string,
   payload: StatuspageSummary,
-): { status: AppHealthStatus; message: string } {
+): ExtractedStatus {
   const globalStatus  = globalFromStatuspageIndicator(payload.status?.indicator);
   const globalMessage = payload.status?.description ?? "Statuspage API response";
+
+  // Incident detail + upcoming maintenance ride along on every return path —
+  // the summary payload already carries them, and "Degraded" with a headline
+  // is far more actionable than a bare color.
+  const activeIncident = (payload.incidents ?? []).find(
+    (i) => i.name && i.status && i.status !== "resolved",
+  );
+  const incident = activeIncident?.name
+    ? incidentHeadline(activeIncident.name, activeIncident.incident_updates?.[0]?.body)
+    : undefined;
+  const upcomingMaintenance = upcomingFromStatuspage(payload);
 
   // Build group-id → group-name map so leaf components can inherit their
   // parent group name for scoring. e.g. "Synchronisation node" in the
@@ -341,6 +405,8 @@ function extractStatuspageStatus(
     return {
       status: normalizeComponentStatus(fuzzy.rawStatus),
       message: `${fuzzy.name}: ${fuzzy.rawStatus.replace(/_/g, " ")}`,
+      incident,
+      upcomingMaintenance,
     };
   }
 
@@ -349,28 +415,23 @@ function extractStatuspageStatus(
     return {
       status: normalizeComponentStatus(best.rawStatus),
       message: `${best.name}: ${best.rawStatus.replace(/_/g, " ")}`,
+      incident,
+      upcomingMaintenance,
     };
   }
 
   // Prefer active incident name over generic component/global message
-  const activeIncident = (payload.incidents ?? []).find(
-    (i) => i.status && i.status !== "resolved",
-  );
-  if (activeIncident?.name) {
-    const latestBody = activeIncident.incident_updates?.[0]?.body?.trim() ?? "";
-    const incidentDetail = latestBody.length > 0 && latestBody.length <= 200
-      ? `${activeIncident.name} — ${latestBody}`
-      : activeIncident.name;
-    return { status: globalStatus, message: incidentDetail };
+  if (incident) {
+    return { status: globalStatus, message: incident, incident, upcomingMaintenance };
   }
 
-  return { status: globalStatus, message: globalMessage };
+  return { status: globalStatus, message: globalMessage, upcomingMaintenance };
 }
 
 function extractInstatusStatus(
   appName: string,
   payload: InstatusSummary,
-): { status: AppHealthStatus; message: string } {
+): ExtractedStatus {
   const globalStatus = globalFromInstatus(payload);
 
   const components = (payload.components ?? [])
@@ -378,14 +439,15 @@ function extractInstatusStatus(
     .map((c) => ({ name: c.name, rawStatus: c.status ?? "" }));
 
   const activeIncident = (payload.activeIncidents ?? []).find(
-    (i) => i.status && i.status.toUpperCase() !== "RESOLVED",
+    (i) => i.name && i.status && i.status.toUpperCase() !== "RESOLVED",
   );
-  if (activeIncident?.name) {
-    const latestBody = activeIncident.updates?.[0]?.body?.trim() ?? "";
-    const incidentDetail = latestBody.length > 0 && latestBody.length <= 200
-      ? `${activeIncident.name} — ${latestBody}`
-      : activeIncident.name;
-    return { status: globalStatus, message: incidentDetail };
+  const incident = activeIncident?.name
+    ? incidentHeadline(activeIncident.name, activeIncident.updates?.[0]?.body)
+    : undefined;
+  const upcomingMaintenance = upcomingFromInstatus(payload);
+
+  if (incident) {
+    return { status: globalStatus, message: incident, incident, upcomingMaintenance };
   }
 
   const fuzzy = findFuzzyNameComponent(appName, components);
@@ -393,6 +455,7 @@ function extractInstatusStatus(
     return {
       status:  normalizeComponentStatus(fuzzy.rawStatus),
       message: `${fuzzy.name}: ${fuzzy.rawStatus}`,
+      upcomingMaintenance,
     };
   }
 
@@ -401,11 +464,13 @@ function extractInstatusStatus(
     return {
       status:  normalizeComponentStatus(best.rawStatus),
       message: `${best.name}: ${best.rawStatus}`,
+      upcomingMaintenance,
     };
   }
   return {
     status:  globalStatus,
     message: `Page: ${payload.page?.status ?? "unknown"}`,
+    upcomingMaintenance,
   };
 }
 
@@ -415,9 +480,9 @@ function extractInstatusStatus(
  */
 function normalizeJsonApiState(state: string): AppHealthStatus {
   if (state === "operational" || state === "up" || state === "ok") return "operational";
+  if (state.includes("maintenance")) return "maintenance";
   if (state.includes("degraded") || state.includes("issues") || state.includes("minor")) return "degraded";
   if (state.includes("outage") || state.includes("down") || state.includes("major")) return "outage";
-  if (state.includes("maintenance")) return "degraded";
   return "degraded";
 }
 
@@ -435,7 +500,7 @@ function normalizeJsonApiState(state: string): AppHealthStatus {
 function extractAnyStatus(
   appName: string,
   payload: unknown,
-): { status: AppHealthStatus; message: string } {
+): ExtractedStatus {
   const p = payload as Record<string, unknown>;
   const statusObj = p.status as Record<string, unknown> | undefined;
   const pageObj   = p.page   as Record<string, unknown> | undefined;
@@ -651,9 +716,17 @@ async function checkAppHealth(app: RegisteredApp): Promise<HealthCheckResult> {
 
       // extractAnyStatus auto-detects Statuspage / Instatus / description-only
       // from the payload shape — no URL heuristic needed.
-      const { status, message } = extractAnyStatus(app.appName, payload);
+      const { status, message, incident, upcomingMaintenance } = extractAnyStatus(app.appName, payload);
 
-      return { appId: app.id, status, checkedAt: new Date().toISOString(), responseTimeMs, message };
+      return {
+        appId: app.id,
+        status,
+        checkedAt: new Date().toISOString(),
+        responseTimeMs,
+        message,
+        ...(incident ? { incident } : {}),
+        ...(upcomingMaintenance ? { upcomingMaintenance } : {}),
+      };
     }
 
     // ── custom / fallback — treat as plain HTTP ping ───────────────────────

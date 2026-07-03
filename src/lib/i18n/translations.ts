@@ -23,6 +23,7 @@ const en: Translations = {
   "header.refresh": "Refresh",
   "header.exportTooltip": "Export app list",
   "header.importTooltip": "Import app list (JSON)",
+  "header.timeline": "Event timeline",
   "header.quickSetup": "Quick Setup",
   "header.addApp": "Add App",
   "header.howToUse": "How to use",
@@ -31,6 +32,7 @@ const en: Translations = {
   "status.operational": "Operational",
   "status.degraded": "Degraded",
   "status.outage": "Outage",
+  "status.maintenance": "Maintenance",
   "status.monitored": "{n} monitored",
 
   // Vendor raw component statuses (Statuspage / Instatus tokens)
@@ -121,6 +123,13 @@ const en: Translations = {
   "share.blockedUrl": "Blocked URL",
   "import.fileInvalid": "Invalid backup file.",
 
+  // Event timeline
+  "timeline.desc": "Status transitions detected in the last {n} checks per app.",
+  "timeline.empty": "No status changes recorded yet.",
+
+  // Maintenance
+  "maintenance.upcoming": "Maintenance scheduled",
+
   // Jira import
   "header.jiraImport": "Import from Jira",
   "jiraImport.title": "Import from Jira",
@@ -153,6 +162,7 @@ const en: Translations = {
   "notification.disabled": "Notifications off",
   "notification.denied": "Notifications blocked",
   "notification.degraded": "{appName} is degraded",
+  "notification.maintenance": "{appName} is under maintenance",
   "notification.outage": "{appName} is experiencing an outage",
   "notification.recovered": "{appName} is back to operational",
 
@@ -220,6 +230,7 @@ const ja: Translations = {
   "header.refresh": "更新",
   "header.exportTooltip": "アプリ一覧をエクスポート",
   "header.importTooltip": "アプリ一覧をインポート (JSON)",
+  "header.timeline": "イベント履歴",
   "header.quickSetup": "クイック設定",
   "header.addApp": "アプリを追加",
   "header.howToUse": "使い方",
@@ -232,6 +243,7 @@ const ja: Translations = {
   "status.operational": "正常",
   "status.degraded": "一部不安定",
   "status.outage": "障害",
+  "status.maintenance": "メンテナンス",
   "status.monitored": "{n} 件監視中",
 
   // Vendor raw component statuses (Statuspage / Instatus tokens)
@@ -318,6 +330,13 @@ const ja: Translations = {
   "share.blockedUrl": "ブロックされたURL",
   "import.fileInvalid": "無効なバックアップファイルです。",
 
+  // Event timeline
+  "timeline.desc": "アプリごとの直近 {n} 回のチェックで検出された状態遷移です。",
+  "timeline.empty": "記録された状態変化はまだありません。",
+
+  // Maintenance
+  "maintenance.upcoming": "メンテナンス予定",
+
   // Jira import
   "header.jiraImport": "Jira からインポート",
   "jiraImport.title": "Jira からインポート",
@@ -350,6 +369,7 @@ const ja: Translations = {
   "notification.disabled": "通知オフ",
   "notification.denied": "通知がブロックされています",
   "notification.degraded": "{appName} が不安定です",
+  "notification.maintenance": "{appName} はメンテナンス中です",
   "notification.outage": "{appName} で障害が発生しています",
   "notification.recovered": "{appName} が復旧しました",
 
@@ -419,6 +439,7 @@ const de: Translations = {
   "header.refresh": "Aktualisieren",
   "header.exportTooltip": "App-Liste exportieren",
   "header.importTooltip": "App-Liste importieren (JSON)",
+  "header.timeline": "Ereignisverlauf",
   "header.quickSetup": "Schnellstart",
   "header.addApp": "App hinzufügen",
   "header.howToUse": "Anleitung",
@@ -431,6 +452,7 @@ const de: Translations = {
   "status.operational": "Betriebsbereit",
   "status.degraded": "Eingeschränkt",
   "status.outage": "Ausfall",
+  "status.maintenance": "Wartung",
   "status.monitored": "{n} überwacht",
 
   // Vendor raw component statuses (Statuspage / Instatus tokens)
@@ -517,6 +539,13 @@ const de: Translations = {
   "share.blockedUrl": "Blockierte URL",
   "import.fileInvalid": "Ungültige Sicherungsdatei.",
 
+  // Event timeline
+  "timeline.desc": "Statusübergänge aus den letzten {n} Prüfungen pro App.",
+  "timeline.empty": "Noch keine Statusänderungen aufgezeichnet.",
+
+  // Maintenance
+  "maintenance.upcoming": "Wartung geplant",
+
   // Jira import
   "header.jiraImport": "Aus Jira importieren",
   "jiraImport.title": "Aus Jira importieren",
@@ -549,6 +578,7 @@ const de: Translations = {
   "notification.disabled": "Benachrichtigungen deaktiviert",
   "notification.denied": "Benachrichtigungen blockiert",
   "notification.degraded": "{appName} ist beeinträchtigt",
+  "notification.maintenance": "{appName} wird gewartet",
   "notification.outage": "{appName} hat einen Ausfall",
   "notification.recovered": "{appName} ist wieder verfügbar",
 
@@ -618,6 +648,7 @@ const ko: Translations = {
   "header.refresh": "새로고침",
   "header.exportTooltip": "앱 목록 내보내기",
   "header.importTooltip": "앱 목록 가져오기 (JSON)",
+  "header.timeline": "이벤트 타임라인",
   "header.quickSetup": "빠른 설정",
   "header.addApp": "앱 추가",
   "header.howToUse": "사용 방법",
@@ -630,6 +661,7 @@ const ko: Translations = {
   "status.operational": "정상",
   "status.degraded": "성능 저하",
   "status.outage": "장애",
+  "status.maintenance": "점검 중",
   "status.monitored": "{n}개 모니터링 중",
 
   // Vendor raw component statuses (Statuspage / Instatus tokens)
@@ -716,6 +748,13 @@ const ko: Translations = {
   "share.blockedUrl": "차단된 URL",
   "import.fileInvalid": "유효하지 않은 백업 파일입니다.",
 
+  // Event timeline
+  "timeline.desc": "앱별 최근 {n}회 체크에서 감지된 상태 전환입니다.",
+  "timeline.empty": "기록된 상태 변화가 아직 없습니다.",
+
+  // Maintenance
+  "maintenance.upcoming": "점검 예정",
+
   // Jira import
   "header.jiraImport": "Jira에서 가져오기",
   "jiraImport.title": "Jira에서 가져오기",
@@ -748,6 +787,7 @@ const ko: Translations = {
   "notification.disabled": "알림 꺼짐",
   "notification.denied": "알림이 차단됨",
   "notification.degraded": "{appName}이(가) 불안정합니다",
+  "notification.maintenance": "{appName}이(가) 점검 중입니다",
   "notification.outage": "{appName}에 장애가 발생했습니다",
   "notification.recovered": "{appName}이(가) 정상 복구되었습니다",
 
@@ -817,6 +857,7 @@ const fr: Translations = {
   "header.refresh": "Actualiser",
   "header.exportTooltip": "Exporter la liste",
   "header.importTooltip": "Importer la liste (JSON)",
+  "header.timeline": "Historique des événements",
   "header.quickSetup": "Configuration rapide",
   "header.addApp": "Ajouter une app",
   "header.howToUse": "Mode d'emploi",
@@ -829,6 +870,7 @@ const fr: Translations = {
   "status.operational": "Opérationnel",
   "status.degraded": "Dégradé",
   "status.outage": "Panne",
+  "status.maintenance": "Maintenance",
   "status.monitored": "{n} suivies",
 
   // Vendor raw component statuses (Statuspage / Instatus tokens)
@@ -915,6 +957,13 @@ const fr: Translations = {
   "share.blockedUrl": "URL bloquée",
   "import.fileInvalid": "Fichier de sauvegarde invalide.",
 
+  // Event timeline
+  "timeline.desc": "Transitions d'état détectées lors des {n} dernières vérifications par app.",
+  "timeline.empty": "Aucun changement d'état enregistré.",
+
+  // Maintenance
+  "maintenance.upcoming": "Maintenance prévue",
+
   // Jira import
   "header.jiraImport": "Importer depuis Jira",
   "jiraImport.title": "Importer depuis Jira",
@@ -947,6 +996,7 @@ const fr: Translations = {
   "notification.disabled": "Notifications désactivées",
   "notification.denied": "Notifications bloquées",
   "notification.degraded": "{appName} est dégradé",
+  "notification.maintenance": "{appName} est en maintenance",
   "notification.outage": "{appName} est en panne",
   "notification.recovered": "{appName} est de nouveau opérationnel",
 

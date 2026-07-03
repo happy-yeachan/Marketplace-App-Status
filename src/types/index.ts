@@ -1,6 +1,6 @@
 export type CheckType = "statuspage_api" | "http_ping" | "custom";
 
-export type AppHealthStatus = "operational" | "degraded" | "outage";
+export type AppHealthStatus = "operational" | "degraded" | "outage" | "maintenance";
 
 export interface PingRecord {
   status: AppHealthStatus;
@@ -272,6 +272,10 @@ export interface HealthCheckResult {
   checkedAt: string;
   responseTimeMs: number | null;
   message?: string;
+  /** Active incident headline (title + latest update excerpt) reported by the vendor. */
+  incident?: string;
+  /** Next announced maintenance window, when the vendor has one scheduled. */
+  upcomingMaintenance?: { name: string; scheduledFor: string };
   /** Present when the stored URL was stale and auto-discovery found a replacement. */
   updatedStatusUrl?: string;
   updatedCheckType?: CheckType;
