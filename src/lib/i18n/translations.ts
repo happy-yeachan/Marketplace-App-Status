@@ -121,6 +121,10 @@ const en: Translations = {
   "share.importDuplicate": "{added} apps imported, {skipped} already in your list.",
   "share.invalid": "Invalid or corrupted share link.",
   "share.blockedUrl": "Blocked URL",
+  "share.embedTooltip": "Copy embed link (iframe)",
+  "share.embedCopied": "Embed link copied!",
+  "embed.openFull": "Open full dashboard",
+  "embed.invalid": "Invalid embed link — regenerate it from the dashboard.",
   "import.fileInvalid": "Invalid backup file.",
 
   // Event timeline
@@ -328,6 +332,10 @@ const ja: Translations = {
   "share.importDuplicate": "{added} 件をインポート、{skipped} 件はすでに追加済みです。",
   "share.invalid": "共有リンクが無効か破損しています。",
   "share.blockedUrl": "ブロックされたURL",
+  "share.embedTooltip": "埋め込みリンクをコピー (iframe)",
+  "share.embedCopied": "埋め込みリンクをコピーしました！",
+  "embed.openFull": "ダッシュボードを開く",
+  "embed.invalid": "無効な埋め込みリンクです。ダッシュボードから再生成してください。",
   "import.fileInvalid": "無効なバックアップファイルです。",
 
   // Event timeline
@@ -537,6 +545,10 @@ const de: Translations = {
   "share.importDuplicate": "{added} Apps importiert, {skipped} bereits in Ihrer Liste.",
   "share.invalid": "Ungültiger oder beschädigter Freigabe-Link.",
   "share.blockedUrl": "Blockierte URL",
+  "share.embedTooltip": "Embed-Link kopieren (iframe)",
+  "share.embedCopied": "Embed-Link kopiert!",
+  "embed.openFull": "Dashboard öffnen",
+  "embed.invalid": "Ungültiger Embed-Link — bitte im Dashboard neu erstellen.",
   "import.fileInvalid": "Ungültige Sicherungsdatei.",
 
   // Event timeline
@@ -746,6 +758,10 @@ const ko: Translations = {
   "share.importDuplicate": "{added}개 가져옴, {skipped}개는 이미 추가돼 있습니다.",
   "share.invalid": "유효하지 않거나 손상된 공유 링크입니다.",
   "share.blockedUrl": "차단된 URL",
+  "share.embedTooltip": "임베드 링크 복사 (iframe)",
+  "share.embedCopied": "임베드 링크가 복사됐습니다!",
+  "embed.openFull": "전체 대시보드 열기",
+  "embed.invalid": "유효하지 않은 임베드 링크입니다 — 대시보드에서 다시 생성해주세요.",
   "import.fileInvalid": "유효하지 않은 백업 파일입니다.",
 
   // Event timeline
@@ -955,6 +971,10 @@ const fr: Translations = {
   "share.importDuplicate": "{added} apps importées, {skipped} déjà dans votre liste.",
   "share.invalid": "Lien de partage invalide ou corrompu.",
   "share.blockedUrl": "URL bloquée",
+  "share.embedTooltip": "Copier le lien d'intégration (iframe)",
+  "share.embedCopied": "Lien d'intégration copié !",
+  "embed.openFull": "Ouvrir le tableau de bord",
+  "embed.invalid": "Lien d'intégration invalide — régénérez-le depuis le tableau de bord.",
   "import.fileInvalid": "Fichier de sauvegarde invalide.",
 
   // Event timeline

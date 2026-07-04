@@ -13,6 +13,7 @@ import {
   ChevronsUpDown,
   CircleDashed,
   Download,
+  Frame,
   History,
   ExternalLink,
   HelpCircle,
@@ -37,7 +38,13 @@ import { QuickSetupDialog } from "@/components/quick-setup-dialog";
 import { ShareImportDialog } from "@/components/share-import-dialog";
 import { useTranslation } from "@/lib/i18n/use-translation";
 import { LOCALE_LABELS, LOCALES, type Locale } from "@/lib/i18n/locales";
-import { buildShareUrl, decodeSharePayload, parseShareHash } from "@/lib/share";
+import { buildEmbedUrl, buildShareUrl, decodeSharePayload, parseShareHash } from "@/lib/share";
+import {
+  fetchStatusBatched,
+  localizeStatusMessage,
+  STATUS_TEXT_CLASS,
+  toStatusPageUrl,
+} from "@/lib/status-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -87,28 +94,6 @@ const REFRESH_OPTIONS = [
 const HISTORY_MAX = 30;
 const RECHECK_COOLDOWN_MS = 90_000; // skip initial scan if last check was < 90 s ago
 const BAR_COUNT = 30;
-const STATUS_BATCH_SIZE = 50; // must match MAX_APPS_PER_REQUEST on the server
-
-async function fetchStatusBatched(apps: RegisteredApp[]): Promise<HealthCheckResponse | null> {
-  if (apps.length === 0) return null;
-  const chunks: RegisteredApp[][] = [];
-  for (let i = 0; i < apps.length; i += STATUS_BATCH_SIZE) {
-    chunks.push(apps.slice(i, i + STATUS_BATCH_SIZE));
-  }
-  const responses = await Promise.all(
-    chunks.map((chunk) =>
-      fetch("/api/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apps: chunk }),
-      })
-        .then((r) => (r.ok ? (r.json() as Promise<HealthCheckResponse>) : null))
-        .catch(() => null),
-    ),
-  );
-  const results = responses.flatMap((r) => r?.results ?? []);
-  return results.length > 0 ? { results } : null;
-}
 
 interface StatusToast {
   id: string;
@@ -127,17 +112,6 @@ const STATUS_PRIORITY: Record<AppHealthStatus, number> = {
 type SortKey = "appName" | "vendorName" | "status" | "responseTimeMs" | "checkedAt";
 type SortDir = "asc" | "desc";
 
-/**
- * Derive the public status page URL from the status API endpoint.
- * Handles both Atlassian Statuspage (/api/v2/status.json or /api/v2/summary.json)
- * and Instatus (/summary.json) formats.
- */
-function toStatusPageUrl(statusUrl: string): string | null {
-  if (!statusUrl) return null;
-  const base = statusUrl.replace(/\/api\/v2\/(status|summary)\.json$|\/summary\.json$|\/index\.json$/g, "");
-  return base || null;
-}
-
 // A percentage over 1–2 samples is misleading — hide it until we have enough.
 const MIN_UPTIME_SAMPLES = 3;
 
@@ -148,38 +122,6 @@ function uptimePct(history: PingRecord[]): number | null {
   return Math.round((up / history.length) * 100);
 }
 
-// ── Vendor raw-status localization ─────────────────────────────────────────────
-// Server messages end in a raw vendor status token, e.g.
-// "ScriptRunner for Jira Cloud: degraded performance". Translate the known
-// Statuspage/Instatus tokens so they don't appear as raw English inside a
-// localized UI; unknown suffixes (incident titles etc.) pass through untouched.
-
-const KNOWN_RAW_STATUSES = new Set([
-  "operational",
-  "degradedperformance",
-  "partialoutage",
-  "majoroutage",
-  "undermaintenance",
-]);
-
-const STATUS_TEXT_CLASS: Record<AppHealthStatus, string> = {
-  operational: "text-emerald-600",
-  degraded: "text-amber-600",
-  outage: "text-red-600",
-  maintenance: "text-blue-600",
-};
-
-function localizeStatusMessage(
-  message: string,
-  t: (key: string) => string,
-): string {
-  const m = message.match(/^(.+):\s*([A-Za-z][A-Za-z _-]*)$/);
-  if (!m) return message;
-  const token = m[2].trim().toLowerCase().replace(/[\s_-]+/g, "");
-  return KNOWN_RAW_STATUSES.has(token)
-    ? `${m[1]}: ${t(`rawStatus.${token}`)}`
-    : message;
-}
 
 // ── Heartbeat bars ─────────────────────────────────────────────────────────────
 // Uses native `title` tooltip to avoid nested-interactive-element issues.
@@ -738,6 +680,12 @@ export function StatusDashboard() {
   const handleShare = useCallback(() => {
     void buildShareUrl(apps).then((url) =>
       navigator.clipboard.writeText(url).then(() => addNotice(t("share.copied"))),
+    );
+  }, [apps, t, addNotice]);
+
+  const handleCopyEmbed = useCallback(() => {
+    void buildEmbedUrl(apps).then((url) =>
+      navigator.clipboard.writeText(url).then(() => addNotice(t("share.embedCopied"))),
     );
   }, [apps, t, addNotice]);
 
@@ -1435,6 +1383,16 @@ export function StatusDashboard() {
                 >
                   <Upload className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   {t("header.importTooltip")}
+                </button>
+                <div className="my-1 h-px bg-border" />
+                <button
+                  type="button"
+                  onClick={handleCopyEmbed}
+                  disabled={apps.length === 0}
+                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Frame className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  {t("share.embedTooltip")}
                 </button>
               </PopoverContent>
             </Popover>

@@ -206,3 +206,19 @@ export function parseShareHash(): string | null {
   const match = window.location.hash.match(/^#share=(.+)$/);
   return match ? match[1] : null;
 }
+
+// ── Embed view (read-only /embed page, e.g. inside a Confluence iframe) ──────
+// Uses the same payload codec but a distinct `#apps=` hash namespace so an
+// embed URL never triggers the dashboard's share-import flow.
+
+export async function buildEmbedUrl(apps: RegisteredApp[]): Promise<string> {
+  const payload = await encodeSharePayload(apps);
+  const base = typeof window !== "undefined" ? window.location.origin : "";
+  return `${base}/embed#apps=${payload}`;
+}
+
+export function parseEmbedHash(): string | null {
+  if (typeof window === "undefined") return null;
+  const match = window.location.hash.match(/^#apps=(.+)$/);
+  return match ? match[1] : null;
+}

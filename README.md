@@ -48,7 +48,7 @@ Atlassian's own services have a status page, but the hundreds of third-party Mar
 | **i18n** | UI available in 5 languages: English, 日本語, Deutsch, 한국어, Français. Locale persisted to localStorage. Privacy page includes jurisdiction-specific legal sections (GDPR, PIPA, APPI) per locale. |
 | **Export / Import** | Download your app list as JSON, and restore it later from the same file (Import re-validates every entry and passes status URLs through the SSRF guard). |
 | **Dark Mode** | Theme toggle with localStorage persistence and anti-flicker inline script. |
-| **Confluence Embeddable** | Can be embedded as an iframe in Confluence Cloud pages (`*.atlassian.net`). CSP `frame-ancestors` is configured to allow this; `X-Frame-Options` is intentionally omitted (it doesn't support wildcards and overrides CSP in some browsers). |
+| **Confluence Embeddable** | Dedicated read-only `/embed` view for iframes: compact status board with summary counts, incident headlines, and auto-refresh. Stateless by design (app list in the URL hash, no localStorage) so it survives third-party-iframe storage partitioning. CSP `frame-ancestors` allows `*.atlassian.net`; `X-Frame-Options` is intentionally omitted (it doesn't support wildcards and overrides CSP in some browsers). |
 | **No database** | All user state stored in `localStorage`. Requires a Next.js host (Vercel) for the server-side API routes — no database or authentication infrastructure needed. |
 
 ---
@@ -260,6 +260,21 @@ https://marketplace.yeachan.cloud/#share=z:jVNNb9swDP0rgs5x4TjK...
 **First-visit behaviour:** when a new user arrives via a share link, the default app seeding is skipped — the dashboard starts empty and populates only with the shared apps after the user confirms the import.
 
 **Quick Setup compatibility:** Marketplace app IDs are preserved in the share payload, so apps imported via share link are correctly detected as "already added" in the Quick Setup dialog.
+
+### Embed view (`/embed`)
+
+The share menu also offers **Copy embed link (iframe)** — a live, read-only team status board for wiki pages:
+
+```
+https://marketplace.yeachan.cloud/embed#apps=z:jVNNb9sw...&theme=auto
+```
+
+- Same payload codec as share links, but under the `#apps=` hash namespace so an embed URL never triggers the dashboard's import dialog.
+- **Stateless**: the app list comes from the hash, nothing is written to localStorage — third-party iframes get partitioned/blocked storage in several browsers, so a storage-backed embed would break exactly where it's used. The hash is never sent to the server.
+- Auto-refreshes every 5 minutes with a per-viewer jitter (up to 30 s) so N teammates viewing the same page don't hit vendor APIs in lockstep.
+- Optional query params: `?theme=dark|light` (default: auto), `?lang=en|ja|de|ko|fr` (default: browser language).
+- "Open full dashboard" links to the equivalent `#share=` URL so viewers can import the list into their own dashboard.
+- Recommended iframe height: `count × 41 + 80` px (each row ≈ 41 px plus the summary bar).
 
 ---
 
